@@ -26,8 +26,7 @@ test.describe("authentication", () => {
     await page.getByTestId("login-submit").click();
     await expect(page.getByTestId("home")).toBeVisible({ timeout: 30_000 });
 
-    // Sign out from the sidebar user menu
-    await page.getByTestId("sidebar").hover();
+    // Sign out from the sidebar user menu (avatar is visible while collapsed)
     await page.getByTestId("user-menu-trigger").click();
     await page.getByTestId("sign-out").click();
     await expect(page).toHaveURL(/\/login/, { timeout: 15_000 });

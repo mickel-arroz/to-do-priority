@@ -1,6 +1,7 @@
 "use client";
 
-import { Code2, Flame, Mail, User } from "@/components/icons";
+import { Code2, Mail, User } from "@/components/icons";
+import { Logo } from "@/components/layout/Logo";
 import { Card, CardContent } from "@/components/ui/card";
 import { useT } from "@/lib/i18n/locale-context";
 
@@ -14,9 +15,9 @@ export default function AboutPage() {
 
   return (
     <div className="mx-auto max-w-lg space-y-6" data-testid="about-page">
-      <header className="glow-primary space-y-2 text-center">
-        <Flame className="mx-auto size-10 text-primary" />
-        <h1 className="gradient-text text-2xl font-bold">{t.about.title}</h1>
+      <header className="space-y-2 text-center">
+        <Logo className="mx-auto size-10" size={40} />
+        <h1 className="gradient-text text-3xl font-bold">{t.about.title}</h1>
       </header>
 
       <p className="text-center text-sm leading-relaxed text-muted-foreground">

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { format } from "date-fns";
 import { CategoryContent } from "@/components/categories/CategoryContent";
 import { sortByDateAndPriority } from "@/lib/tasks";
+import { attachImageUrls } from "@/lib/task-images";
 import { createClient } from "@/lib/supabase/server";
 import type { Category, Task } from "@/lib/types";
 
@@ -32,10 +33,12 @@ export default async function CategoryPage({
 
   if (!category) notFound();
 
+  const tasksWithImages = await attachImageUrls(supabase, (tasks ?? []) as Task[]);
+
   return (
     <CategoryContent
       category={category as Category}
-      tasks={sortByDateAndPriority((tasks ?? []) as Task[])}
+      tasks={sortByDateAndPriority(tasksWithImages)}
       categories={(categories ?? []) as Category[]}
       today={today}
     />

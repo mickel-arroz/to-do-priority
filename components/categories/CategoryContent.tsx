@@ -4,8 +4,9 @@ import { useState } from "react";
 import { Pencil, Plus, Trash2 } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { categoryTint } from "@/components/categories/categoryMeta";
-import { CategoryIcon } from "@/components/categories/CategoryIcon";
+import { CategoryColorIcon } from "@/components/categories/CategoryColorIcon";
 import { CategoryFormDialog } from "@/components/categories/CategoryFormDialog";
+import { EmptyState } from "@/components/ui/empty-state";
 import { CompletedSection } from "@/components/home/CompletedSection";
 import { DeleteCategoryDialog } from "@/components/categories/DeleteCategoryDialog";
 import { TaskBoard, TaskRows, useTaskBoard } from "@/components/tasks/TaskBoard";
@@ -45,18 +46,13 @@ function CategoryView({ category }: CategoryContentProps) {
   return (
     <div className="space-y-6" data-testid="category-page">
       <header
-        className="flex flex-wrap items-center justify-between gap-3 rounded-lg p-4"
+        className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-card p-4"
         style={{ backgroundImage: categoryTint(category.color) }}
       >
         <div className="flex min-w-0 items-center gap-3">
-          <span
-            className="flex size-10 shrink-0 items-center justify-center rounded-md text-on-strong"
-            style={{ backgroundColor: category.color ?? "var(--primary)" }}
-          >
-            <CategoryIcon icon={category.icon} className="size-5" />
-          </span>
+          <CategoryColorIcon icon={category.icon} color={category.color} />
           <div className="min-w-0">
-            <h1 className="truncate text-2xl font-bold">
+            <h1 className="truncate text-3xl font-bold">
               {category.is_default ? t.categories.general : category.name}
             </h1>
             <p className="text-sm text-muted-foreground">
@@ -96,9 +92,7 @@ function CategoryView({ category }: CategoryContentProps) {
       </header>
 
       {visible.length === 0 ? (
-        <p className="rounded-lg border border-dashed px-4 py-10 text-center text-sm text-muted-foreground">
-          {t.home.emptyList}
-        </p>
+        <EmptyState className="py-10">{t.home.emptyList}</EmptyState>
       ) : (
         <div className="space-y-2">
           <TaskRows tasks={visible} />

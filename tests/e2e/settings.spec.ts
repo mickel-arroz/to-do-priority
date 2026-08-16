@@ -3,7 +3,6 @@ import { expect, test } from "@playwright/test";
 test.describe("theme, language, PWA and about", () => {
   test("theme toggle persists across reloads via localStorage", async ({ page }) => {
     await page.goto("/");
-    await page.getByTestId("sidebar").hover();
     const html = page.locator("html");
     const wasDark = await html.evaluate((el) => el.classList.contains("dark"));
 
@@ -22,10 +21,10 @@ test.describe("theme, language, PWA and about", () => {
 
   test("language toggle translates the UI and persists", async ({ page }) => {
     await page.goto("/");
-    await page.getByTestId("sidebar").hover();
 
     const toggle = page.getByTestId("language-toggle").first();
-    const initial = await toggle.textContent();
+    // The toggle now shows a language icon; the current locale lives in its label
+    const initial = await toggle.getAttribute("aria-label");
     await toggle.click();
 
     if (initial?.includes("ES")) {
@@ -49,7 +48,6 @@ test.describe("theme, language, PWA and about", () => {
 
   test("the hidden about link opens the about page", async ({ page }) => {
     await page.goto("/");
-    await page.getByTestId("sidebar").hover();
     await page.getByTestId("about-link").click();
     await expect(page.getByTestId("about-page")).toBeVisible();
   });

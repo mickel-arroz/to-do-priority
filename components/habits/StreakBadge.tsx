@@ -17,7 +17,7 @@ export function StreakBadge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full bg-streak/15 font-semibold text-streak",
+        "inline-flex items-center gap-1 rounded-full bg-streak-soft font-semibold text-streak",
         size === "sm" ? "px-2 py-0.5 text-xs" : "px-3 py-1 text-sm"
       )}
       title={`${streak} ${t.home.streak}`}

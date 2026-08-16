@@ -97,11 +97,12 @@ function makeIcon(size) {
   return encodePng(size, size, rgba);
 }
 
-mkdirSync(join(root, "public", "icons"), { recursive: true });
-for (const size of [192, 512]) {
-  writeFileSync(join(root, "public", "icons", `icon-${size}.png`), makeIcon(size));
-}
-writeFileSync(join(root, "public", "icons", "apple-icon.png"), makeIcon(180));
+// NOTE: App icons/favicon are generated from the real brand logo
+// (public/logo.png, from the provided image) — not from this placeholder
+// flame. Icon generation here is intentionally disabled so re-running this
+// script does not clobber public/icons/*, app/icon.png or app/apple-icon.png.
+// `makeIcon`/`inFlame`/PNG helpers above are kept for reference only.
+void makeIcon;
 
 // ---------- WAV (16-bit PCM mono) ----------
 const SAMPLE_RATE = 44100;

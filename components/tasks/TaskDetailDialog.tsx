@@ -57,6 +57,7 @@ export function TaskDetailDialog({
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
   const [images, setImages] = useState<TaskImage[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [viewer, setViewer] = useState<string | null>(null);
 
   // Derived-state-during-render: sync local lists when the task changes
   const [prevTaskId, setPrevTaskId] = useState<string | null>(null);
@@ -132,8 +133,9 @@ export function TaskDetailDialog({
   }
 
   return (
+    <>
     <Dialog open onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
+      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
           <div className="flex items-start justify-between gap-3 pr-6">
             <DialogTitle className="leading-snug">{task.title}</DialogTitle>
@@ -144,6 +146,9 @@ export function TaskDetailDialog({
         </DialogHeader>
 
         <div className="space-y-4 text-sm">
+          {/* Two-column layout on desktop: info left, images right */}
+          <div className="grid gap-x-6 gap-y-4 md:grid-cols-[1.4fr_1fr]">
+          <div className="min-w-0 space-y-4">
           <div className="flex flex-wrap items-center gap-2 text-muted-foreground">
             <span>
               {t.tasks.dueDate}: <strong>{task.due_date}</strong>
@@ -218,6 +223,7 @@ export function TaskDetailDialog({
               </ul>
             </div>
           )}
+          </div>
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -251,19 +257,29 @@ export function TaskDetailDialog({
                 {images.map((img) => (
                   <div key={img.id} className="group relative aspect-square overflow-hidden rounded-lg border">
                     {img.signed_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={img.signed_url}
-                        alt=""
-                        className="size-full object-cover"
-                      />
+                      <button
+                        type="button"
+                        onClick={() => setViewer(img.signed_url ?? null)}
+                        aria-label={t.tasks.images}
+                        className="size-full cursor-zoom-in"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={img.signed_url}
+                          alt=""
+                          className="size-full object-cover"
+                        />
+                      </button>
                     ) : (
                       <div className="size-full bg-muted" />
                     )}
                     <button
-                      onClick={() => removeImage(img)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeImage(img);
+                      }}
                       aria-label={t.common.delete}
-                      className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-on-strong opacity-0 transition-opacity group-hover:opacity-100"
+                      className="absolute right-1 top-1 z-10 rounded-full bg-black/60 p-1 text-on-strong opacity-0 transition-opacity group-hover:opacity-100"
                     >
                       <X className="size-3.5" />
                     </button>
@@ -271,6 +287,7 @@ export function TaskDetailDialog({
                 ))}
               </div>
             )}
+          </div>
           </div>
 
           <Separator />
@@ -307,5 +324,20 @@ export function TaskDetailDialog({
         </div>
       </DialogContent>
     </Dialog>
+
+    {viewer && (
+      <Dialog open onOpenChange={(open) => !open && setViewer(null)}>
+        <DialogContent className="border-0 bg-transparent p-0 shadow-none sm:max-w-3xl">
+          <DialogTitle className="sr-only">{t.tasks.images}</DialogTitle>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={viewer}
+            alt=""
+            className="max-h-[85dvh] w-full rounded-lg object-contain"
+          />
+        </DialogContent>
+      </Dialog>
+    )}
+    </>
   );
 }

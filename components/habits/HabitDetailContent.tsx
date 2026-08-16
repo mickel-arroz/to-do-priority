@@ -81,10 +81,10 @@ export function HabitDetailContent({
 
   return (
     <div className="space-y-6" data-testid="habit-detail">
-      <header className="glow-primary space-y-3">
+      <header className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <h1 className="gradient-text text-2xl font-bold">{habit.name}</h1>
+            <h1 className="gradient-text text-3xl font-bold">{habit.name}</h1>
             <StreakBadge streak={progress.currentStreak} size="lg" />
           </div>
           <div className="flex items-center gap-2">
@@ -162,7 +162,7 @@ export function HabitDetailContent({
             {linkedTasks.map((task) => (
               <li
                 key={task.id}
-                className="flex items-center gap-2 rounded-xl border px-3 py-2 text-sm"
+                className="flex items-center gap-2 rounded-xl border bg-card px-3 py-2 text-sm"
               >
                 <span
                   className={cn(

@@ -143,7 +143,7 @@ export function TaskFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
+      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>{task ? t.tasks.editTask : t.tasks.newTask}</DialogTitle>
         </DialogHeader>
@@ -172,77 +172,92 @@ export function TaskFormDialog({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label>{t.tasks.category}</Label>
-              <Select value={categoryId} onValueChange={setCategoryId}>
-                <SelectTrigger data-testid="task-category-select" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.is_default ? t.categories.general : c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="task-due">{t.tasks.dueDate} *</Label>
-              <Input
-                id="task-due"
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                required
-                data-testid="task-due-input"
-              />
-            </div>
-          </div>
+          {/* Two-column layout on desktop, stacked on mobile */}
+          <div className="grid gap-x-6 gap-y-4 md:grid-cols-2">
+            {/* Left column: core attributes */}
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>{t.tasks.category}</Label>
+                  <Select value={categoryId} onValueChange={setCategoryId}>
+                    <SelectTrigger
+                      data-testid="task-category-select"
+                      className="w-full"
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.is_default ? t.categories.general : c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="task-due">{t.tasks.dueDate} *</Label>
+                  <Input
+                    id="task-due"
+                    type="date"
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                    required
+                    data-testid="task-due-input"
+                  />
+                </div>
+              </div>
 
-          <div className="space-y-2">
-            <Label>{t.tasks.priority}</Label>
-            <PrioritySelect value={priority} onChange={setPriority} />
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="task-link">
+                  {t.tasks.link}{" "}
+                  <span className="text-muted-foreground">
+                    ({t.common.optional})
+                  </span>
+                </Label>
+                <Input
+                  id="task-link"
+                  type="url"
+                  placeholder="https://"
+                  value={link}
+                  onChange={(e) => setLink(e.target.value)}
+                />
+              </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="task-link">
-                {t.tasks.link}{" "}
-                <span className="text-muted-foreground">({t.common.optional})</span>
-              </Label>
-              <Input
-                id="task-link"
-                type="url"
-                placeholder="https://"
-                value={link}
-                onChange={(e) => setLink(e.target.value)}
-              />
+              <div className="space-y-2">
+                <Label>{t.tasks.recurrence}</Label>
+                <RecurrencePicker value={recurrence} onChange={setRecurrence} />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="task-pomodoro">{t.tasks.pomodoro}</Label>
-              <Input
-                id="task-pomodoro"
-                type="number"
-                min={0}
-                max={180}
-                placeholder="0"
-                value={pomodoro === 0 ? "" : pomodoro}
-                onChange={(e) =>
-                  setPomodoro(Math.min(180, Math.max(0, Number(e.target.value) || 0)))
-                }
-              />
-            </div>
-          </div>
 
-          <div className="space-y-2">
-            <Label>{t.tasks.recurrence}</Label>
-            <RecurrencePicker value={recurrence} onChange={setRecurrence} />
+            {/* Right column: priority & productivity */}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>{t.tasks.priority}</Label>
+                <PrioritySelect value={priority} onChange={setPriority} />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="task-pomodoro">{t.tasks.pomodoro}</Label>
+                <Input
+                  id="task-pomodoro"
+                  type="number"
+                  min={0}
+                  max={180}
+                  placeholder="0"
+                  value={pomodoro === 0 ? "" : pomodoro}
+                  onChange={(e) =>
+                    setPomodoro(
+                      Math.min(180, Math.max(0, Number(e.target.value) || 0))
+                    )
+                  }
+                />
+              </div>
+            </div>
           </div>
 
           {!task && (
-            <div className="space-y-2">
+            <div className="space-y-2 border-t pt-4">
               <Label htmlFor="task-subtask">{t.tasks.subtasks}</Label>
               {newSubtasks.length > 0 && (
                 <ul className="space-y-1">

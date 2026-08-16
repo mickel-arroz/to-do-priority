@@ -47,7 +47,7 @@ export function CompletedTaskRow({
   return (
     <div
       data-testid={`completed-row-${task.id}`}
-      className="flex items-center gap-3 rounded-lg border bg-muted/40 px-3 py-2.5 text-sm text-muted-foreground"
+      className="flex items-center gap-3 rounded-lg border bg-muted px-3 py-2.5 text-sm text-muted-foreground"
     >
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

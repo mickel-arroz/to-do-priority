@@ -8,6 +8,7 @@ import { MotivationalCard } from "@/components/home/MotivationalCard";
 import { TaskSection } from "@/components/home/TaskSection";
 import { TodayProgress } from "@/components/home/TodayProgress";
 import { CompletedTaskRow } from "@/components/tasks/CompletedTaskRow";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { TaskBoard, TaskRows, useTaskBoard } from "@/components/tasks/TaskBoard";
 import { useT } from "@/lib/i18n/locale-context";
 import {
@@ -63,31 +64,30 @@ function HomeSections({
   const { pending, upcoming } = partitionTasks(board.tasks, today);
   const completedToday = sortCompletedToday(board.completedToday);
   const done = completedToday.length;
+  const success = completedToday.filter((task) => task.status === "yes").length;
+  const failure = completedToday.filter((task) => task.status === "no").length;
 
   return (
     <div className="space-y-6" data-testid="home">
-      <header className="glow-primary flex flex-wrap items-center justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-bold">
-            <span className="gradient-text">
-              {greeting}
-              {userName ? `, ${userName.split(" ")[0]}` : ""}
-            </span>
-          </h1>
-          {bestStreak > 0 && (
+      <PageHeader
+        title={`${greeting}${userName ? `, ${userName.split(" ")[0]}` : ""}`}
+        subtitle={
+          bestStreak > 0 && (
             <p className="mt-1 flex items-center gap-1 text-sm font-semibold">
               <Flame className="size-4 text-streak" />
               <span className="gradient-streak bg-clip-text text-transparent">
                 {bestStreak} {t.home.streak}
               </span>
             </p>
-          )}
-        </div>
-        <Button onClick={() => board.openNewTask()} data-testid="new-task">
-          <Plus className="size-4" />
-          {t.tasks.newTask}
-        </Button>
-      </header>
+          )
+        }
+        actions={
+          <Button onClick={() => board.openNewTask()} data-testid="new-task">
+            <Plus className="size-4" />
+            {t.tasks.newTask}
+          </Button>
+        }
+      />
 
       <MotivationalCard dayOfYear={dayOfYear} />
 
@@ -96,7 +96,13 @@ function HomeSections({
         title={t.home.pending}
         count={pending.length}
         emptyMessage={t.home.emptyPending}
-        aside={<TodayProgress done={done} total={done + pending.length} />}
+        aside={
+          <TodayProgress
+            success={success}
+            failure={failure}
+            total={done + pending.length}
+          />
+        }
         footer={completedToday.map((task) => (
           <CompletedTaskRow key={task.id} task={task} />
         ))}
@@ -109,6 +115,7 @@ function HomeSections({
         title={t.home.upcoming}
         count={upcoming.length}
         emptyMessage={t.home.emptyUpcoming}
+        defaultOpen={false}
       >
         <TaskRows tasks={upcoming} />
       </TaskSection>
@@ -136,13 +143,14 @@ function HomeSections({
             accentColor={category.color}
             count={categoryTasks.length}
             emptyMessage={t.home.emptyList}
+            defaultOpen={false}
           >
             <TaskRows tasks={categoryTasks} />
           </TaskSection>
         );
       })}
 
-      <CompletedSection showCategory />
+      <CompletedSection showCategory defaultOpen={false} />
     </div>
   );
 }

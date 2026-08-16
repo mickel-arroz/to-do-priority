@@ -20,7 +20,7 @@ const WEEKDAYS: Record<"es" | "en", string[]> = {
 
 const DAY_STYLES: Record<string, string> = {
   completed: "bg-success text-on-strong",
-  missed: "bg-failure/80 text-on-strong",
+  missed: "bg-failure text-on-strong",
   "today-pending": "border-2 border-primary text-primary font-bold",
   future: "bg-muted text-muted-foreground/50",
   "before-start": "text-muted-foreground/30",

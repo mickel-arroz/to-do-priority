@@ -19,11 +19,11 @@ describe("LanguageToggle", () => {
   it("switches the whole dictionary ES <-> EN and persists to localStorage", async () => {
     renderWithProviders(<Probe />, { locale: "es" });
     expect(screen.getByTestId("probe")).toHaveTextContent("Inicio");
-    expect(screen.getByTestId("language-toggle")).toHaveTextContent("ES");
+    expect(screen.getByTestId("language-toggle")).toHaveAccessibleName(/ES/);
 
     await userEvent.click(screen.getByTestId("language-toggle"));
     expect(screen.getByTestId("probe")).toHaveTextContent("Home");
-    expect(screen.getByTestId("language-toggle")).toHaveTextContent("EN");
+    expect(screen.getByTestId("language-toggle")).toHaveAccessibleName(/EN/);
     expect(localStorage.getItem("locale")).toBe("en");
     expect(document.cookie).toContain("locale=en");
 

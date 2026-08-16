@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Flame } from "@/components/icons";
+import { Logo } from "@/components/layout/Logo";
 import { toast } from "sonner";
 import { LoadingButton } from "@/components/ui/loading-button";
 import { Input } from "@/components/ui/input";
@@ -52,8 +52,8 @@ export default function RegisterPage() {
     <main className="flex min-h-dvh items-center justify-center px-4">
       <div className="w-full max-w-sm space-y-6">
         <div className="space-y-2 text-center">
-          <Flame className="mx-auto size-10 text-primary" />
-          <h1 className="text-2xl font-bold">{t.auth.registerTitle}</h1>
+          <Logo className="mx-auto size-10" size={40} />
+          <h1 className="text-3xl font-bold">{t.auth.registerTitle}</h1>
           <p className="text-sm text-muted-foreground">{t.auth.registerSubtitle}</p>
         </div>
 

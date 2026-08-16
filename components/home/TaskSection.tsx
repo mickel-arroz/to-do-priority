@@ -3,6 +3,7 @@
 import { Accordion as AccordionPrimitive } from "radix-ui";
 import { ChevronDown } from "@/components/icons";
 import { AccordionContent, AccordionItem } from "@/components/ui/accordion";
+import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
 
 type TaskSectionProps = {
@@ -16,6 +17,8 @@ type TaskSectionProps = {
   accentColor?: string | null;
   /** Rendered after the rows (even when count is 0), e.g. today's completed */
   footer?: React.ReactNode;
+  /** Whether the accordion starts expanded (default true) */
+  defaultOpen?: boolean;
   children: React.ReactNode;
   className?: string;
 };
@@ -32,6 +35,7 @@ export function TaskSection({
   emptyMessage,
   accentColor,
   footer,
+  defaultOpen = true,
   children,
   className,
 }: TaskSectionProps) {
@@ -39,12 +43,14 @@ export function TaskSection({
     <AccordionPrimitive.Root
       type="single"
       collapsible
-      defaultValue={id}
+      defaultValue={defaultOpen ? id : undefined}
       className={cn("w-full", className)}
       style={
         accentColor
           ? {
-              backgroundImage: `linear-gradient(135deg, color-mix(in oklab, ${accentColor} 8%, transparent), transparent 60%)`,
+              // Opaque accent tint (composited over the card color) so the
+              // page background/grid never shows through the section
+              backgroundColor: `color-mix(in oklab, ${accentColor} 8%, var(--card))`,
               borderRadius: "var(--radius)",
             }
           : undefined
@@ -73,9 +79,7 @@ export function TaskSection({
         </div>
         <AccordionContent className="pb-2">
           {count === 0 ? (
-            <p className="rounded-lg border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">
-              {emptyMessage}
-            </p>
+            <EmptyState>{emptyMessage}</EmptyState>
           ) : (
             <div className="space-y-2">{children}</div>
           )}

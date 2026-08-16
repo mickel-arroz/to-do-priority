@@ -1,40 +1,20 @@
 import type { Metadata, Viewport } from "next";
-import localFont from "next/font/local";
+import { Roboto_Condensed } from "next/font/google";
 import { cookies } from "next/headers";
 import { ThemeProvider } from "next-themes";
 import { ServiceWorkerRegistrar } from "@/components/pwa/ServiceWorkerRegistrar";
+import { GridPattern } from "@/components/ui/grid-pattern";
 import { Toaster } from "@/components/ui/sonner";
 import { LocaleProvider } from "@/lib/i18n/locale-context";
 import { DEFAULT_LOCALE, isLocale, LOCALE_COOKIE } from "@/lib/i18n";
 import "./globals.css";
 
-// Self-hosted variable fonts: the files live in app/fonts, no runtime
-// requests to Google Fonts
-const hankenGrotesk = localFont({
-  src: [
-    {
-      path: "./fonts/HankenGrotesk-var-latin.woff2",
-      weight: "100 900",
-      style: "normal",
-    },
-    {
-      path: "./fonts/HankenGrotesk-var-italic-latin.woff2",
-      weight: "100 900",
-      style: "italic",
-    },
-  ],
-  variable: "--font-hanken-grotesk",
-});
-
-const bricolage = localFont({
-  src: [
-    {
-      path: "./fonts/BricolageGrotesque-var-latin.woff2",
-      weight: "200 800",
-      style: "normal",
-    },
-  ],
-  variable: "--font-bricolage",
+// Self-hosted at build time by next/font: fonts are served as static assets
+// from our own domain, so the browser makes no runtime requests to Google.
+const robotoCondensed = Roboto_Condensed({
+  subsets: ["latin"],
+  variable: "--font-roboto-condensed",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -51,8 +31,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f9fafb" },
-    { media: "(prefers-color-scheme: dark)", color: "#14171d" },
+    { media: "(prefers-color-scheme: light)", color: "#fafafa" },
+    { media: "(prefers-color-scheme: dark)", color: "#0f0f14" },
   ],
 };
 
@@ -69,11 +49,15 @@ export default async function RootLayout({
     <html
       lang={locale}
       suppressHydrationWarning
-      className={`${hankenGrotesk.variable} ${bricolage.variable} h-full antialiased`}
+      className={`${robotoCondensed.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
           <LocaleProvider initialLocale={locale}>
+            <GridPattern
+              className="fixed inset-0 -z-10 fill-foreground/[0.09] stroke-foreground/[0.09] [mask-image:radial-gradient(ellipse_at_center,white,transparent_70%)]"
+              aria-hidden="true"
+            />
             {children}
             <Toaster position="top-center" richColors />
             <ServiceWorkerRegistrar />

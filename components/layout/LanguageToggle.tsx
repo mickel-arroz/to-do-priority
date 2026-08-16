@@ -1,5 +1,6 @@
 "use client";
 
+import { Languages } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { useLocale } from "@/lib/i18n/locale-context";
 
@@ -9,13 +10,13 @@ export function LanguageToggle() {
   return (
     <Button
       variant="ghost"
-      size="sm"
-      className="h-9 px-2 font-mono text-xs font-semibold"
-      aria-label={t.settings.language}
+      size="icon"
+      className="size-9"
+      aria-label={`${t.settings.language}: ${locale === "es" ? "ES" : "EN"}`}
       onClick={() => setLocale(locale === "es" ? "en" : "es")}
       data-testid="language-toggle"
     >
-      {locale === "es" ? "ES" : "EN"}
+      <Languages className="size-4" />
     </Button>
   );
 }

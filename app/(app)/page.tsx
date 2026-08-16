@@ -2,6 +2,7 @@ import { format, getDayOfYear } from "date-fns";
 import { HomeContent } from "@/components/home/HomeContent";
 import { computeHabitProgress } from "@/lib/habits";
 import { sortCompletedToday } from "@/lib/tasks";
+import { attachImageUrls } from "@/lib/task-images";
 import { createClient } from "@/lib/supabase/server";
 import type { Category, Habit, HabitLog, Task } from "@/lib/types";
 
@@ -45,7 +46,7 @@ export default async function HomePage() {
     }),
   ]);
 
-  const allTasks = (tasks ?? []) as Task[];
+  const allTasks = await attachImageUrls(supabase, (tasks ?? []) as Task[]);
   const allCategories = (categories ?? []) as Category[];
 
   const logsByHabit = new Map<string, HabitLog[]>();

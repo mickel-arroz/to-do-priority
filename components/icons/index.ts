@@ -1,5 +1,6 @@
 // Single source for app icons: every component imports icons from here,
 // never from lucide-react directly (shadcn/ui internals excluded).
+export { ListDetails } from "@/components/icons/ListDetails";
 export {
   BookOpen,
   Briefcase,
@@ -18,6 +19,7 @@ export {
   ImagePlus,
   Infinity,
   Info,
+  Languages,
   Lightbulb,
   Link2,
   List,
@@ -29,6 +31,7 @@ export {
   Minus,
   Moon,
   Palette,
+  PanelLeft,
   Pause,
   Pencil,
   Plane,

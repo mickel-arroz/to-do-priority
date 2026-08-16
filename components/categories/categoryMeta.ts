@@ -7,7 +7,7 @@ import {
   GraduationCap,
   Heart,
   Home,
-  List,
+  ListDetails,
   Palette,
   Plane,
   ShoppingCart,
@@ -18,7 +18,7 @@ import {
 
 /** Curated icon set a list can be tagged with (stored by key in the DB) */
 export const CATEGORY_ICONS: Record<string, LucideIcon> = {
-  list: List,
+  list: ListDetails,
   briefcase: Briefcase,
   book: BookOpen,
   graduation: GraduationCap,
@@ -35,13 +35,13 @@ export const CATEGORY_ICONS: Record<string, LucideIcon> = {
 };
 
 export function categoryIcon(icon: string | null | undefined): LucideIcon {
-  return CATEGORY_ICONS[icon ?? "list"] ?? List;
+  return CATEGORY_ICONS[icon ?? "list"] ?? ListDetails;
 }
 
 /** Sober accent palette for lists (hex stored in the DB) */
 export const CATEGORY_COLORS = [
   "#2C4A6E", // azul tinta
-  "#1D7A8C", // teal profundo
+  "#A21CAF", // fucsia (reemplaza al teal que chocaba con la marca)
   "#3F6212", // oliva
   "#B45309", // bronce
   "#9F1239", // burdeos

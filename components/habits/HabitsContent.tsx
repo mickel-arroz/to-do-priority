@@ -9,6 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { HabitFormDialog } from "@/components/habits/HabitFormDialog";
 import { HabitProgressBar } from "@/components/habits/HabitProgressBar";
 import { StreakBadge } from "@/components/habits/StreakBadge";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { EmptyState } from "@/components/ui/empty-state";
 import { computeHabitProgress } from "@/lib/habits";
 import { useT } from "@/lib/i18n/locale-context";
 import type { Habit, HabitLog, Task } from "@/lib/types";
@@ -33,20 +35,18 @@ export function HabitsContent({ habits, logs, tasks, today }: HabitsContentProps
 
   return (
     <div className="space-y-6" data-testid="habits-page">
-      <header className="glow-primary flex flex-wrap items-center justify-between gap-3">
-        <h1 className="gradient-text min-w-0 flex-1 text-2xl font-bold">
-          {t.habits.title}
-        </h1>
-        <Button onClick={() => setFormOpen(true)} data-testid="new-habit">
-          <Plus className="size-4" />
-          {t.habits.newHabit}
-        </Button>
-      </header>
+      <PageHeader
+        title={t.habits.title}
+        actions={
+          <Button onClick={() => setFormOpen(true)} data-testid="new-habit">
+            <Plus className="size-4" />
+            {t.habits.newHabit}
+          </Button>
+        }
+      />
 
       {habits.length === 0 ? (
-        <p className="rounded-xl border border-dashed px-4 py-12 text-center text-sm text-muted-foreground">
-          {t.habits.empty}
-        </p>
+        <EmptyState className="rounded-xl py-12">{t.habits.empty}</EmptyState>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           {habits.map((habit) => {

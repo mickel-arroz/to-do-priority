@@ -14,6 +14,8 @@ type CompletedSectionProps = {
   categoryId?: string;
   /** Show the list each task belongs to (Home) */
   showCategory?: boolean;
+  /** Whether the section starts expanded (default true) */
+  defaultOpen?: boolean;
 };
 
 /**
@@ -23,6 +25,7 @@ type CompletedSectionProps = {
 export function CompletedSection({
   categoryId,
   showCategory = false,
+  defaultOpen = true,
 }: CompletedSectionProps) {
   const { t } = useLocale();
   const board = useTaskBoard();
@@ -77,6 +80,7 @@ export function CompletedSection({
       title={t.home.completed}
       count={visible.length}
       emptyMessage={t.home.emptyCompleted}
+      defaultOpen={defaultOpen}
     >
       {visible.map((task) => (
         <CompletedTaskRow key={task.id} task={task} showCategory={showCategory} />
