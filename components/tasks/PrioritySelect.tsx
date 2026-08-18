@@ -32,7 +32,7 @@ export function PrioritySelect({
             onClick={() => onChange(p)}
             data-testid={`priority-${p}`}
             className={cn(
-              "flex items-center gap-2 rounded-md border-2 p-3 text-left transition-all",
+              "flex items-center gap-2 rounded-md border-2 px-3 py-[0.585rem] text-left transition-all",
               classes.soft,
               selected
                 ? cn(classes.ring, "scale-[1.02] shadow-md")

@@ -33,14 +33,14 @@ test.describe("tasks", () => {
     expect(p1).toBeLessThan(p2);
   });
 
-  test("edits a task from the detail dialog", async ({ page }) => {
+  test("edits a task from the edit dialog", async ({ page }) => {
     await page.goto("/");
+    // Clicking a task opens the edit form directly (no separate detail dialog)
     await page
       .getByTestId("task-title")
       .filter({ hasText: "Tarea P2 e2e" })
       .first()
       .click();
-    await page.getByTestId("task-edit").click();
     await page.getByTestId("task-title-input").fill("Tarea P2 editada");
     await page.getByTestId("task-save").click();
     await expect(page.getByText("Tarea P2 editada").first()).toBeVisible();

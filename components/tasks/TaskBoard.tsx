@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { celebrate } from "@/components/feedback/celebrate";
 import { usePomodoroController } from "@/components/pomodoro/PomodoroProvider";
-import { TaskDetailDialog } from "@/components/tasks/TaskDetailDialog";
 import { TaskFormDialog } from "@/components/tasks/TaskFormDialog";
 import { TaskRow } from "@/components/tasks/TaskRow";
 import { api } from "@/lib/api/client";
@@ -59,7 +58,6 @@ export function TaskBoard({
   const { t } = useLocale();
   const router = useRouter();
   const pomodoro = usePomodoroController();
-  const [detailTask, setDetailTask] = useState<Task | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [formTask, setFormTask] = useState<Task | null>(null);
   const [formCategoryId, setFormCategoryId] = useState<string | undefined>();
@@ -160,9 +158,11 @@ export function TaskBoard({
     setFormOpen(true);
   }, []);
 
+  // Clicking a task opens the edit form directly (there is no separate detail
+  // dialog anymore).
   const openEditTask = useCallback((task: Task) => {
-    setDetailTask(null);
     setFormTask(task);
+    setFormCategoryId(undefined);
     setFormOpen(true);
   }, []);
 
@@ -176,18 +176,12 @@ export function TaskBoard({
         completeTask,
         changeTaskStatus,
         openPomodoro: pomodoro.openPomodoro,
-        openDetail: setDetailTask,
+        openDetail: openEditTask,
         openNewTask,
       }}
     >
       {children}
 
-      <TaskDetailDialog
-        task={detailTask}
-        categories={categories}
-        onOpenChange={(open) => !open && setDetailTask(null)}
-        onEdit={openEditTask}
-      />
       <TaskFormDialog
         open={formOpen}
         onOpenChange={setFormOpen}

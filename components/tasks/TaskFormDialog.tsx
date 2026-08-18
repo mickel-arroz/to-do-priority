@@ -2,8 +2,19 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, X } from "@/components/icons";
+import { Plus, Trash2, X } from "@/components/icons";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { LoadingButton } from "@/components/ui/loading-button";
 import {
@@ -75,6 +86,7 @@ export function TaskFormDialog({
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editingValue, setEditingValue] = useState("");
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Live character-limit checks: block submit while any field overflows, but
   // still let the user keep typing (fields turn red via aria-invalid).
@@ -175,6 +187,20 @@ export function TaskFormDialog({
       toast.error(apiErrorMessage(err, t));
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!task) return;
+    setDeleting(true);
+    try {
+      await api.tasks.remove(task.id);
+      onOpenChange(false);
+      router.refresh();
+    } catch (err) {
+      toast.error(apiErrorMessage(err, t));
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -400,6 +426,38 @@ export function TaskFormDialog({
           )}
 
           <DialogFooter>
+            {task && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="mr-auto text-destructive hover:text-destructive"
+                    data-testid="task-delete"
+                  >
+                    <Trash2 className="size-4" />
+                    {t.tasks.deleteTask}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>{t.tasks.deleteTask}</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {t.tasks.deleteTaskConfirm}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDelete}
+                      disabled={deleting}
+                    >
+                      {t.common.delete}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               {t.common.cancel}
             </Button>
