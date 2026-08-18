@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2, X } from "@/components/icons";
 import { toast } from "sonner";
@@ -46,7 +46,7 @@ import { api, type TaskInput } from "@/lib/api/client";
 import { apiErrorMessage } from "@/lib/api/error-message";
 import { useT } from "@/lib/i18n/locale-context";
 import { LIMITS } from "@/lib/limits";
-import type { Category, Priority, Task } from "@/lib/types";
+import type { Category, Priority, Subtask, Task } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type TaskFormDialogProps = {
@@ -86,6 +86,13 @@ export function TaskFormDialog({
   const [subtaskDraft, setSubtaskDraft] = useState("");
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editingValue, setEditingValue] = useState("");
+  // Edit mode only: existing subtasks are managed live (each action hits the
+  // API immediately) since the task already exists.
+  const [existingSubtasks, setExistingSubtasks] = useState<Subtask[]>([]);
+  const [editingSubtaskId, setEditingSubtaskId] = useState<string | null>(null);
+  const [editingSubtaskValue, setEditingSubtaskValue] = useState("");
+  const [rowBusyId, setRowBusyId] = useState<string | null>(null); // subtask id or "new"
+  const [subtasksDirty, setSubtasksDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -97,8 +104,15 @@ export function TaskFormDialog({
   const subtasksOver =
     newSubtasks.some((s) => s.length > LIMITS.subtaskTitle) ||
     (editingIndex !== null && editingValue.length > LIMITS.subtaskTitle);
+  const existingEditOver =
+    editingSubtaskId !== null &&
+    editingSubtaskValue.length > LIMITS.subtaskTitle;
   const hasOverflow =
-    titleOver || descriptionOver || subtaskDraftOver || subtasksOver;
+    titleOver ||
+    descriptionOver ||
+    subtaskDraftOver ||
+    subtasksOver ||
+    existingEditOver;
 
   // Derived-state-during-render: repopulate the form whenever it opens
   const [prevKey, setPrevKey] = useState<string | null>(null);
@@ -128,6 +142,15 @@ export function TaskFormDialog({
       setSubtaskDraft("");
       setEditingIndex(null);
       setEditingValue("");
+      setExistingSubtasks(
+        task?.subtasks
+          ? [...task.subtasks].sort((a, b) => a.position - b.position)
+          : []
+      );
+      setEditingSubtaskId(null);
+      setEditingSubtaskValue("");
+      setRowBusyId(null);
+      setSubtasksDirty(false);
     }
   }
 
@@ -153,6 +176,91 @@ export function TaskFormDialog({
     );
     setEditingIndex(null);
     setEditingValue("");
+  }
+
+  // --- Live subtask management (edit mode only; `task` is guaranteed set) ---
+
+  async function toggleExistingSubtask(st: Subtask) {
+    if (!task) return;
+    const next = !st.is_done;
+    setExistingSubtasks((prev) =>
+      prev.map((s) => (s.id === st.id ? { ...s, is_done: next } : s))
+    );
+    setRowBusyId(st.id);
+    try {
+      await api.tasks.toggleSubtask(task.id, st.id, next);
+      setSubtasksDirty(true);
+    } catch (err) {
+      setExistingSubtasks((prev) =>
+        prev.map((s) => (s.id === st.id ? { ...s, is_done: !next } : s))
+      );
+      toast.error(apiErrorMessage(err, t));
+    } finally {
+      setRowBusyId(null);
+    }
+  }
+
+  function startExistingEdit(st: Subtask) {
+    setEditingSubtaskId(st.id);
+    setEditingSubtaskValue(st.title);
+  }
+
+  async function commitExistingEdit(st: Subtask) {
+    if (!task) return;
+    const v = editingSubtaskValue.trim();
+    setEditingSubtaskId(null);
+    setEditingSubtaskValue("");
+    // Empty does NOT delete here (unlike create mode); deletion is explicit.
+    if (!v || v === st.title || v.length > LIMITS.subtaskTitle) return;
+    const prevTitle = st.title;
+    setExistingSubtasks((prev) =>
+      prev.map((s) => (s.id === st.id ? { ...s, title: v } : s))
+    );
+    setRowBusyId(st.id);
+    try {
+      await api.tasks.updateSubtask(task.id, st.id, v);
+      setSubtasksDirty(true);
+    } catch (err) {
+      setExistingSubtasks((prev) =>
+        prev.map((s) => (s.id === st.id ? { ...s, title: prevTitle } : s))
+      );
+      toast.error(apiErrorMessage(err, t));
+    } finally {
+      setRowBusyId(null);
+    }
+  }
+
+  async function removeExistingSubtask(st: Subtask) {
+    if (!task) return;
+    const snapshot = existingSubtasks;
+    setExistingSubtasks((prev) => prev.filter((s) => s.id !== st.id));
+    setRowBusyId(st.id);
+    try {
+      await api.tasks.removeSubtask(task.id, st.id);
+      setSubtasksDirty(true);
+    } catch (err) {
+      setExistingSubtasks(snapshot);
+      toast.error(apiErrorMessage(err, t));
+    } finally {
+      setRowBusyId(null);
+    }
+  }
+
+  async function addExistingSubtask() {
+    if (!task) return;
+    const draft = subtaskDraft.trim();
+    if (!draft || draft.length > LIMITS.subtaskTitle) return;
+    setRowBusyId("new");
+    try {
+      const { subtask } = await api.tasks.addSubtask(task.id, draft);
+      setExistingSubtasks((prev) => [...prev, subtask]);
+      setSubtaskDraft("");
+      setSubtasksDirty(true);
+    } catch (err) {
+      toast.error(apiErrorMessage(err, t));
+    } finally {
+      setRowBusyId(null);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -207,9 +315,18 @@ export function TaskFormDialog({
 
   const busy = saving || deleting;
   const handleOpenChange = useLockedOpenChange(busy, onOpenChange);
+  // Live subtask edits persist immediately but the list's counters read from
+  // server data, so refresh once on close if anything changed.
+  const closeAndSync = useCallback(
+    (open: boolean) => {
+      if (!open && subtasksDirty) router.refresh();
+      handleOpenChange(open);
+    },
+    [subtasksDirty, router, handleOpenChange]
+  );
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={closeAndSync}>
       <DialogContent
         className="max-h-[90dvh] overflow-y-auto sm:max-w-3xl"
         showCloseButton={!busy}
@@ -335,103 +452,187 @@ export function TaskFormDialog({
             </div>
           </div>
 
-          {!task && (
-            <div className="space-y-2 border-t pt-4">
-              <Label htmlFor="task-subtask">{t.tasks.subtasks}</Label>
-              {newSubtasks.length > 0 && (
-                <ul className="space-y-1">
-                  {newSubtasks.map((s, i) => {
-                    const editing = editingIndex === i;
-                    return (
-                      <li
-                        key={i}
-                        className="flex items-start gap-2 rounded-lg bg-muted px-3 py-1.5 text-sm"
-                      >
-                        {editing ? (
-                          <Input
-                            autoFocus
-                            value={editingValue}
-                            aria-invalid={
-                              editingValue.length > LIMITS.subtaskTitle
-                            }
-                            onChange={(e) => setEditingValue(e.target.value)}
-                            onBlur={commitEdit}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                e.preventDefault();
-                                commitEdit();
-                              } else if (e.key === "Escape") {
-                                setEditingIndex(null);
-                                setEditingValue("");
-                              }
-                            }}
-                            className="h-7"
-                            data-testid={`subtask-edit-${i}`}
+          <div className="space-y-2 border-t pt-4">
+            <Label htmlFor="task-subtask">{t.tasks.subtasks}</Label>
+            {task
+              ? existingSubtasks.length > 0 && (
+                  <ul className="space-y-1">
+                    {existingSubtasks.map((st) => {
+                      const editing = editingSubtaskId === st.id;
+                      const rowBusy = rowBusyId === st.id;
+                      return (
+                        <li
+                          key={st.id}
+                          className="rounded-lg bg-muted px-3 py-2.5 text-sm"
+                        >
+                          {editing && (
+                            <div className="flex items-center justify-end pb-1">
+                              <CharCounter
+                                length={editingSubtaskValue.length}
+                                max={LIMITS.subtaskTitle}
+                              />
+                            </div>
+                          )}
+                          <div className="flex items-start gap-3">
+                          <input
+                            type="checkbox"
+                            checked={st.is_done}
+                            disabled={rowBusy}
+                            onChange={() => toggleExistingSubtask(st)}
+                            aria-label={st.title}
+                            className="mt-0.5 size-5 shrink-0 accent-primary"
                           />
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => startEdit(i)}
-                            className={cn(
-                              "min-w-0 flex-1 whitespace-normal break-words text-left",
-                              s.length > LIMITS.subtaskTitle && "text-failure"
-                            )}
-                            title={t.common.edit}
-                          >
-                            {s}
-                          </button>
-                        )}
-                        {!editing && (
-                          <button
-                            type="button"
-                            aria-label={t.common.delete}
-                            className="mt-0.5 shrink-0"
-                            onClick={() =>
-                              setNewSubtasks((prev) =>
-                                prev.filter((_, j) => j !== i)
-                              )
-                            }
-                          >
-                            <X className="size-4 text-muted-foreground" />
-                          </button>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-              <div className="flex items-center justify-end">
-                <CharCounter
-                  length={subtaskDraft.length}
-                  max={LIMITS.subtaskTitle}
-                />
-              </div>
-              <div className="flex gap-2">
-                <Input
-                  id="task-subtask"
-                  value={subtaskDraft}
-                  onChange={(e) => setSubtaskDraft(e.target.value)}
-                  placeholder={t.tasks.addSubtask}
-                  aria-invalid={subtaskDraftOver}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      addSubtask();
-                    }
-                  }}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={addSubtask}
-                  disabled={!subtaskDraft.trim() || subtaskDraftOver}
-                >
-                  <Plus className="size-4" />
-                </Button>
-              </div>
+                          {editing ? (
+                            <Input
+                              autoFocus
+                              value={editingSubtaskValue}
+                              aria-invalid={
+                                editingSubtaskValue.length > LIMITS.subtaskTitle
+                              }
+                              onChange={(e) =>
+                                setEditingSubtaskValue(e.target.value)
+                              }
+                              onBlur={() => commitExistingEdit(st)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  commitExistingEdit(st);
+                                } else if (e.key === "Escape") {
+                                  setEditingSubtaskId(null);
+                                  setEditingSubtaskValue("");
+                                }
+                              }}
+                              className="h-8"
+                            />
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => startExistingEdit(st)}
+                              className={cn(
+                                "min-w-0 flex-1 whitespace-normal break-words text-left",
+                                st.is_done &&
+                                  "text-muted-foreground line-through"
+                              )}
+                              title={t.common.edit}
+                            >
+                              {st.title}
+                            </button>
+                          )}
+                          {!editing && (
+                            <button
+                              type="button"
+                              aria-label={t.common.delete}
+                              className="-my-1 -mr-1 shrink-0 p-1"
+                              disabled={rowBusy}
+                              onClick={() => removeExistingSubtask(st)}
+                            >
+                              <X className="size-5 text-muted-foreground" />
+                            </button>
+                          )}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )
+              : newSubtasks.length > 0 && (
+                  <ul className="space-y-1">
+                    {newSubtasks.map((s, i) => {
+                      const editing = editingIndex === i;
+                      return (
+                        <li
+                          key={i}
+                          className="flex items-start gap-2 rounded-lg bg-muted px-3 py-1.5 text-sm"
+                        >
+                          {editing ? (
+                            <Input
+                              autoFocus
+                              value={editingValue}
+                              aria-invalid={
+                                editingValue.length > LIMITS.subtaskTitle
+                              }
+                              onChange={(e) => setEditingValue(e.target.value)}
+                              onBlur={commitEdit}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  commitEdit();
+                                } else if (e.key === "Escape") {
+                                  setEditingIndex(null);
+                                  setEditingValue("");
+                                }
+                              }}
+                              className="h-7"
+                              data-testid={`subtask-edit-${i}`}
+                            />
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => startEdit(i)}
+                              className={cn(
+                                "min-w-0 flex-1 whitespace-normal break-words text-left",
+                                s.length > LIMITS.subtaskTitle && "text-failure"
+                              )}
+                              title={t.common.edit}
+                            >
+                              {s}
+                            </button>
+                          )}
+                          {!editing && (
+                            <button
+                              type="button"
+                              aria-label={t.common.delete}
+                              className="mt-0.5 shrink-0"
+                              onClick={() =>
+                                setNewSubtasks((prev) =>
+                                  prev.filter((_, j) => j !== i)
+                                )
+                              }
+                            >
+                              <X className="size-4 text-muted-foreground" />
+                            </button>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+            <div className="flex items-center justify-end">
+              <CharCounter
+                length={subtaskDraft.length}
+                max={LIMITS.subtaskTitle}
+              />
             </div>
-          )}
+            <div className="flex gap-2">
+              <Input
+                id="task-subtask"
+                value={subtaskDraft}
+                onChange={(e) => setSubtaskDraft(e.target.value)}
+                placeholder={t.tasks.addSubtask}
+                aria-invalid={subtaskDraftOver}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (task) addExistingSubtask();
+                    else addSubtask();
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={task ? addExistingSubtask : addSubtask}
+                disabled={
+                  !subtaskDraft.trim() ||
+                  subtaskDraftOver ||
+                  rowBusyId === "new"
+                }
+              >
+                <Plus className="size-4" />
+              </Button>
+            </div>
+          </div>
 
           <DialogFooter>
             {task && (
@@ -466,7 +667,7 @@ export function TaskFormDialog({
                 </AlertDialogContent>
               </AlertDialog>
             )}
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="ghost" onClick={() => closeAndSync(false)}>
               {t.common.cancel}
             </Button>
             <LoadingButton

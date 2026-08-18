@@ -1,12 +1,20 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isUnauthorized, jsonError, requireUser } from "@/app/api/_lib/auth";
+import { LIMITS } from "@/lib/limits";
 
-const createSchema = z.object({ title: z.string().trim().min(1).max(200) });
-const toggleSchema = z.object({
-  subtaskId: z.string().uuid(),
-  is_done: z.boolean(),
+const createSchema = z.object({
+  title: z.string().trim().min(1).max(LIMITS.subtaskTitle),
 });
+const patchSchema = z
+  .object({
+    subtaskId: z.string().uuid(),
+    is_done: z.boolean().optional(),
+    title: z.string().trim().min(1).max(LIMITS.subtaskTitle).optional(),
+  })
+  .refine((v) => v.is_done !== undefined || v.title !== undefined, {
+    message: "no_fields",
+  });
 
 export async function POST(
   request: Request,
@@ -49,12 +57,16 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await request.json().catch(() => null);
-  const parsed = toggleSchema.safeParse(body);
+  const parsed = patchSchema.safeParse(body);
   if (!parsed.success) return jsonError("invalid_payload", 400);
+
+  const update: { is_done?: boolean; title?: string } = {};
+  if (parsed.data.is_done !== undefined) update.is_done = parsed.data.is_done;
+  if (parsed.data.title !== undefined) update.title = parsed.data.title;
 
   const { data, error } = await ctx.supabase
     .from("subtasks")
-    .update({ is_done: parsed.data.is_done })
+    .update(update)
     .eq("id", parsed.data.subtaskId)
     .eq("task_id", id)
     .select()

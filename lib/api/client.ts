@@ -149,6 +149,11 @@ export const api = {
         method: "PATCH",
         body: JSON.stringify({ subtaskId, is_done: isDone }),
       }),
+    updateSubtask: (taskId: string, subtaskId: string, title: string) =>
+      request<{ subtask: Subtask }>(`/api/tasks/${taskId}/subtasks`, {
+        method: "PATCH",
+        body: JSON.stringify({ subtaskId, title }),
+      }),
     addSubtask: (taskId: string, title: string) =>
       request<{ subtask: Subtask }>(`/api/tasks/${taskId}/subtasks`, {
         method: "POST",
