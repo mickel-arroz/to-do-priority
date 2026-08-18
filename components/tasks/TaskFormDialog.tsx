@@ -16,6 +16,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { FormFieldset, useLockedOpenChange } from "@/components/ui/busy";
 import { LoadingButton } from "@/components/ui/loading-button";
 import {
   Dialog,
@@ -204,13 +205,20 @@ export function TaskFormDialog({
     }
   }
 
+  const busy = saving || deleting;
+  const handleOpenChange = useLockedOpenChange(busy, onOpenChange);
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-3xl">
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent
+        className="max-h-[90dvh] overflow-y-auto sm:max-w-3xl"
+        showCloseButton={!busy}
+      >
         <DialogHeader>
           <DialogTitle>{task ? t.tasks.editTask : t.tasks.newTask}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit}>
+          <FormFieldset busy={busy} className="space-y-4">
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-2">
               <Label htmlFor="task-title">{t.tasks.title} *</Label>
@@ -470,6 +478,7 @@ export function TaskFormDialog({
               {t.common.save}
             </LoadingButton>
           </DialogFooter>
+          </FormFieldset>
         </form>
       </DialogContent>
     </Dialog>

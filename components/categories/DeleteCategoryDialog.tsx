@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { useLockedOpenChange } from "@/components/ui/busy";
 import { LoadingButton } from "@/components/ui/loading-button";
 import {
   Dialog,
@@ -47,9 +48,16 @@ export function DeleteCategoryDialog({
     }
   }
 
+  const busy = deleting !== null;
+  const handleOpenChange = useLockedOpenChange(busy, onOpenChange);
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md" data-testid="delete-category-dialog">
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent
+        className="sm:max-w-md"
+        showCloseButton={!busy}
+        data-testid="delete-category-dialog"
+      >
         <DialogHeader>
           <DialogTitle>
             {t.categories.deleteCategory}: {category.name}
@@ -86,6 +94,7 @@ export function DeleteCategoryDialog({
               variant="destructive"
               onClick={() => handleDelete("delete")}
               loading={deleting === "delete"}
+              disabled={busy}
               className="w-full"
               data-testid="delete-all"
             >
@@ -95,6 +104,7 @@ export function DeleteCategoryDialog({
           <Button
             variant="ghost"
             onClick={() => onOpenChange(false)}
+            disabled={busy}
             className="w-full"
           >
             {t.common.cancel}

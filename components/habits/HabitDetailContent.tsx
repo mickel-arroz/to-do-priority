@@ -6,7 +6,6 @@ import { Pencil, ShieldAlert, Trash2 } from "@/components/icons";
 import { toast } from "sonner";
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -16,6 +15,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/ui/loading-button";
 import { Card, CardContent } from "@/components/ui/card";
 import { HabitCalendar } from "@/components/habits/HabitCalendar";
 import { HabitCharts } from "@/components/habits/HabitCharts";
@@ -49,6 +49,8 @@ export function HabitDetailContent({
   const router = useRouter();
   const [logs, setLogs] = useState(initialLogs);
   const [editOpen, setEditOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Backfill 'missed' days so the calendar shows them; progress math
   // derives everything from raw logs regardless
@@ -62,12 +64,14 @@ export function HabitDetailContent({
   const progress = computeHabitProgress(habit, logs, today);
 
   async function handleDelete() {
+    setDeleting(true);
     try {
       await api.habits.remove(habit.id);
       router.push("/habits");
       router.refresh();
     } catch {
       toast.error(t.common.error);
+      setDeleting(false);
     }
   }
 
@@ -97,7 +101,13 @@ export function HabitDetailContent({
             >
               <Pencil className="size-4" />
             </Button>
-            <AlertDialog>
+            <AlertDialog
+              open={confirmOpen}
+              onOpenChange={(o) => {
+                if (deleting) return;
+                setConfirmOpen(o);
+              }}
+            >
               <AlertDialogTrigger asChild>
                 <Button
                   variant="ghost"
@@ -109,7 +119,9 @@ export function HabitDetailContent({
                   <Trash2 className="size-4" />
                 </Button>
               </AlertDialogTrigger>
-              <AlertDialogContent>
+              <AlertDialogContent
+                onEscapeKeyDown={(e) => deleting && e.preventDefault()}
+              >
                 <AlertDialogHeader>
                   <AlertDialogTitle>{t.habits.deleteHabit}</AlertDialogTitle>
                   <AlertDialogDescription>
@@ -117,10 +129,16 @@ export function HabitDetailContent({
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDelete}>
+                  <AlertDialogCancel disabled={deleting}>
+                    {t.common.cancel}
+                  </AlertDialogCancel>
+                  <LoadingButton
+                    variant="destructive"
+                    loading={deleting}
+                    onClick={handleDelete}
+                  >
                     {t.common.delete}
-                  </AlertDialogAction>
+                  </LoadingButton>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>

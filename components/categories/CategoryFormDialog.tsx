@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Check } from "@/components/icons";
 import { Button } from "@/components/ui/button";
+import { FormFieldset, useLockedOpenChange } from "@/components/ui/busy";
 import { CharCounter } from "@/components/ui/char-counter";
 import { LoadingButton } from "@/components/ui/loading-button";
 import {
@@ -85,15 +86,18 @@ export function CategoryFormDialog({
     }
   }
 
+  const handleOpenChange = useLockedOpenChange(saving, onOpenChange);
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm">
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="sm:max-w-sm" showCloseButton={!saving}>
         <DialogHeader>
           <DialogTitle>
             {category ? t.categories.editCategory : t.categories.newCategory}
           </DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit}>
+          <FormFieldset busy={saving} className="space-y-4">
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-2">
               <Label htmlFor="category-name">{t.categories.name}</Label>
@@ -170,6 +174,7 @@ export function CategoryFormDialog({
               {t.common.save}
             </LoadingButton>
           </DialogFooter>
+          </FormFieldset>
         </form>
       </DialogContent>
     </Dialog>

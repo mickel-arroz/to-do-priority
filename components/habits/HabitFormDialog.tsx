@@ -6,6 +6,7 @@ import { addDays } from "date-fns";
 import { toast } from "sonner";
 import { Loader2 } from "@/components/icons";
 import { Button } from "@/components/ui/button";
+import { FormFieldset, useLockedOpenChange } from "@/components/ui/busy";
 import { CharCounter } from "@/components/ui/char-counter";
 import { LoadingButton } from "@/components/ui/loading-button";
 import {
@@ -176,13 +177,19 @@ export function HabitFormDialog({
     }
   }
 
+  const handleOpenChange = useLockedOpenChange(saving, onOpenChange);
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent
+        className="max-h-[90dvh] overflow-y-auto sm:max-w-lg"
+        showCloseButton={!saving}
+      >
         <DialogHeader>
           <DialogTitle>{habit ? t.habits.editHabit : t.habits.newHabit}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit}>
+          <FormFieldset busy={saving} className="space-y-4">
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-2">
               <Label htmlFor="habit-name">{t.habits.name} *</Label>
@@ -346,6 +353,7 @@ export function HabitFormDialog({
               {t.common.save}
             </LoadingButton>
           </DialogFooter>
+          </FormFieldset>
         </form>
       </DialogContent>
     </Dialog>
