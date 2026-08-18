@@ -8,7 +8,7 @@ export default function manifest(): MetadataRoute.Manifest {
       "Tareas con matriz de prioridad, hábitos y pomodoro | Tasks with priority matrix, habits and pomodoro",
     start_url: "/",
     display: "standalone",
-    background_color: "#f9fafb",
+    background_color: "#0f0f14",
     theme_color: "#066f72",
     icons: [
       {
