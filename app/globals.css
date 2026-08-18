@@ -66,23 +66,25 @@
 :root {
   /* Brand palette: teal brand (#066f72, from the logo) on neutral zinc
      grays, with vibrant priority + semantic colors. Whites ~0.985-1 L. */
-  --background: oklch(0.985 0 0);
-  --foreground: oklch(0.32 0.006 285.885);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.32 0.006 285.885);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.32 0.006 285.885);
+  /* Softer, less-pure whites (page ~0.955, surfaces ~0.99) and darker text +
+     more visible borders for stronger light-mode contrast. */
+  --background: oklch(0.955 0.001 286.375);
+  --foreground: oklch(0.27 0.006 285.885);
+  --card: oklch(0.99 0 0);
+  --card-foreground: oklch(0.27 0.006 285.885);
+  --popover: oklch(0.99 0 0);
+  --popover-foreground: oklch(0.27 0.006 285.885);
   --primary: oklch(0.5 0.09 196);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.37 0.013 285.805);
-  --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.552 0.016 285.938);
-  --accent: oklch(0.95 0.025 196);
-  --accent-foreground: oklch(0.5 0.09 196);
-  --destructive: oklch(0.637 0.237 25.331);
-  --border: oklch(0.92 0.004 286.32);
-  --input: oklch(0.92 0.004 286.32);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.945 0.002 286.375);
+  --secondary-foreground: oklch(0.33 0.013 285.805);
+  --muted: oklch(0.945 0.002 286.375);
+  --muted-foreground: oklch(0.5 0.016 285.938);
+  --accent: oklch(0.93 0.03 196);
+  --accent-foreground: oklch(0.45 0.09 196);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.875 0.005 286.32);
+  --input: oklch(0.875 0.005 286.32);
   --ring: oklch(0.5 0.09 196);
   --accent-strong: oklch(0.6 0.11 205);
   --chart-1: oklch(0.5 0.09 196);
@@ -93,14 +95,14 @@
   /* Squarer corners: reduced global radius so components look less rounded.
      The whole rounded-sm/md/lg/xl scale derives from this in @theme. */
   --radius: 0.4rem;
-  --on-strong: oklch(0.985 0 0);
-  --sidebar: oklch(1 0 0);
-  --sidebar-foreground: oklch(0.32 0.006 285.885);
+  --on-strong: oklch(0.99 0 0);
+  --sidebar: oklch(0.99 0 0);
+  --sidebar-foreground: oklch(0.27 0.006 285.885);
   --sidebar-primary: oklch(0.5 0.09 196);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.95 0.025 196);
-  --sidebar-accent-foreground: oklch(0.5 0.09 196);
-  --sidebar-border: oklch(0.92 0.004 286.32);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.93 0.03 196);
+  --sidebar-accent-foreground: oklch(0.45 0.09 196);
+  --sidebar-border: oklch(0.875 0.005 286.32);
   --sidebar-ring: oklch(0.5 0.09 196);
   --priority-1: oklch(0.637 0.237 25.331);
   --priority-2: oklch(0.769 0.188 70.08);
