@@ -21,9 +21,10 @@ export function formatDate(date: Date): string {
 }
 
 /**
- * Next due date for a recurring task, computed from the date it was
- * completed (or its due date, whichever is later, so overdue tasks don't
- * generate instances in the past). Returns null for one-time tasks.
+ * Next due date for a recurring task: adds one interval (or finds the next
+ * allowed weekday) to the given base date. The caller decides the base —
+ * pass the task's original due date so the recurrence keeps its cadence
+ * regardless of when it was marked. Returns null for one-time tasks.
  */
 export function getNextDueDate(
   config: RecurrenceConfig,

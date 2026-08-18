@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { format } from "date-fns";
 import { isUnauthorized, jsonError, requireUser } from "@/app/api/_lib/auth";
 import { getNextDueDate } from "@/lib/recurrence";
+import { getUserToday } from "@/lib/server-today";
 import type { Task } from "@/lib/types";
 
 const completeSchema = z.object({ status: z.enum(["yes", "no"]) });
@@ -36,7 +36,7 @@ export async function POST(
   if (task.status !== "pending") return jsonError("already_completed", 409);
 
   const now = new Date();
-  const today = format(now, "yyyy-MM-dd");
+  const { today } = await getUserToday();
 
   const { error: completionError } = await ctx.supabase
     .from("task_completions")
@@ -62,10 +62,10 @@ export async function POST(
     .select("habit_id")
     .eq("task_id", task.id);
 
-  // Next instance for recurring tasks, from the later of due date / today
-  // so overdue tasks don't spawn instances in the past
+  // Next instance for recurring tasks, always from the task's original due
+  // date so the recurrence keeps its cadence regardless of when it was marked.
   let nextTask: Task | null = null;
-  const nextDue = getNextDueDate(task, task.due_date > today ? task.due_date : today);
+  const nextDue = getNextDueDate(task, task.due_date);
   if (nextDue) {
     const { data: created, error: nextError } = await ctx.supabase
       .from("tasks")
