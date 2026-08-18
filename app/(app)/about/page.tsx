@@ -1,14 +1,13 @@
 "use client";
 
-import { Code2, Mail, User } from "@/components/icons";
+import { Github, Linkedin, User } from "@/components/icons";
 import { Logo } from "@/components/layout/Logo";
 import { Card, CardContent } from "@/components/ui/card";
 import { useT } from "@/lib/i18n/locale-context";
 
-// Placeholders: el usuario proporcionará sus datos reales
-const CREATOR_NAME = "{{CREATOR_NAME}}";
-const CREATOR_EMAIL = "{{CREATOR_EMAIL}}";
-const REPO_URL = "{{REPO_URL}}";
+const CREATOR_NAME = "Mickel Arroz";
+const LINKEDIN_URL = "https://www.linkedin.com/in/mickel-arroz";
+const REPO_URL = "https://github.com/mickel-arroz/to-do-priority";
 
 export default function AboutPage() {
   const t = useT();
@@ -37,21 +36,23 @@ export default function AboutPage() {
           </div>
           <div className="flex items-center gap-3">
             <span className="gradient-primary rounded-lg p-2">
-              <Mail className="size-4 text-on-strong" />
+              <Linkedin className="size-4 text-on-strong" />
             </span>
             <div>
               <p className="text-xs text-muted-foreground">{t.about.contact}</p>
               <a
-                href={`mailto:${CREATOR_EMAIL}`}
-                className="text-sm font-medium text-primary hover:underline"
+                href={LINKEDIN_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="break-all text-sm font-medium text-primary hover:underline"
               >
-                {CREATOR_EMAIL}
+                linkedin.com/in/mickel-arroz
               </a>
             </div>
           </div>
           <div className="flex items-center gap-3">
             <span className="gradient-primary rounded-lg p-2">
-              <Code2 className="size-4 text-on-strong" />
+              <Github className="size-4 text-on-strong" />
             </span>
             <div>
               <p className="text-xs text-muted-foreground">{t.about.repository}</p>
@@ -61,7 +62,7 @@ export default function AboutPage() {
                 rel="noreferrer"
                 className="break-all text-sm font-medium text-primary hover:underline"
               >
-                {REPO_URL}
+                github.com/mickel-arroz/to-do-priority
               </a>
             </div>
           </div>

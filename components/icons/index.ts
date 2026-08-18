@@ -2,6 +2,8 @@
 // never from lucide-react directly (shadcn/ui internals excluded).
 export { ListDetails } from "@/components/icons/ListDetails";
 export { GoalReplace } from "@/components/icons/GoalReplace";
+export { Github } from "@/components/icons/Github";
+export { Linkedin } from "@/components/icons/Linkedin";
 export {
   BookOpen,
   Briefcase,
