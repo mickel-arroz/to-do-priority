@@ -5,9 +5,8 @@ import { Button } from "@/components/ui/button";
 import { CategoryIcon } from "@/components/categories/CategoryIcon";
 import { CompletedSection } from "@/components/home/CompletedSection";
 import { MotivationalCard } from "@/components/home/MotivationalCard";
+import { PendingSection } from "@/components/home/PendingSection";
 import { TaskSection } from "@/components/home/TaskSection";
-import { TodayProgress } from "@/components/home/TodayProgress";
-import { CompletedTaskRow } from "@/components/tasks/CompletedTaskRow";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { TaskBoard, TaskRows, useTaskBoard } from "@/components/tasks/TaskBoard";
 import { useT } from "@/lib/i18n/locale-context";
@@ -91,24 +90,13 @@ function HomeSections({
 
       <MotivationalCard dayOfYear={dayOfYear} />
 
-      <TaskSection
-        id="pending"
-        title={t.home.pending}
-        count={pending.length}
-        emptyMessage={t.home.emptyPending}
-        aside={
-          <TodayProgress
-            success={success}
-            failure={failure}
-            total={done + pending.length}
-          />
-        }
-        footer={completedToday.map((task) => (
-          <CompletedTaskRow key={task.id} task={task} />
-        ))}
-      >
-        <TaskRows tasks={pending} />
-      </TaskSection>
+      <PendingSection
+        pending={pending}
+        completedToday={completedToday}
+        success={success}
+        failure={failure}
+        done={done}
+      />
 
       <TaskSection
         id="upcoming"

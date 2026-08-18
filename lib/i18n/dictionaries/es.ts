@@ -54,6 +54,8 @@ export const es: Dictionary = {
     pending: "Pendientes",
     upcoming: "Futuros",
     todayProgress: "completadas hoy",
+    viewList: "Vista de lista",
+    viewCards: "Vista de tarjetas",
     emptyPending: "Nada pendiente hoy. ¡Disfrútalo!",
     emptyUpcoming: "No hay tareas futuras",
     emptyList: "Esta lista aún no tiene tareas",

@@ -5,15 +5,8 @@ import { motion, useMotionValue, useTransform } from "motion/react";
 import { format } from "date-fns";
 import { enUS, es as esLocale } from "date-fns/locale";
 import { CalendarDays, Check, Link2, ListChecks, Timer, X } from "@/components/icons";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { PriorityTag } from "@/components/tasks/PriorityTag";
+import { TaskCompleteCheckbox } from "@/components/tasks/TaskCompleteCheckbox";
 import { priorityClasses } from "@/lib/priority";
 import { parseDate } from "@/lib/recurrence";
 import { useLocale } from "@/lib/i18n/locale-context";
@@ -122,38 +115,7 @@ export function TaskRow({
         )}
 
         {/* Checkbox: opens a menu to mark the task done or failed */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              onClick={(e) => e.stopPropagation()}
-              aria-label={t.tasks.changeStatus}
-              data-testid="status-button"
-              title={t.tasks.changeStatus}
-              className="flex size-6 shrink-0 items-center justify-center rounded-md border-2 border-muted-foreground/40 text-transparent transition-colors hover:border-primary hover:text-primary"
-            >
-              <Check className="size-3.5" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            <DropdownMenuLabel>{t.tasks.changeStatus}</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => onComplete(task, "yes")}
-              data-testid="status-yes"
-            >
-              <Check className="size-4 text-success" />
-              {t.tasks.completedYes}
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => onComplete(task, "no")}
-              data-testid="status-no"
-            >
-              <X className="size-4 text-failure" />
-              {t.tasks.completedNo}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <TaskCompleteCheckbox task={task} onComplete={onComplete} />
 
         <button
           className="min-w-0 flex-1 text-left"

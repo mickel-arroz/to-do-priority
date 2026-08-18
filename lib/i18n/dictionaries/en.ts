@@ -52,6 +52,8 @@ export const en = {
     pending: "Pending",
     upcoming: "Upcoming",
     todayProgress: "completed today",
+    viewList: "List view",
+    viewCards: "Card view",
     emptyPending: "Nothing pending today. Enjoy it!",
     emptyUpcoming: "No upcoming tasks",
     emptyList: "This list has no tasks yet",

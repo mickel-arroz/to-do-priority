@@ -24,6 +24,8 @@ export {
   Infinity,
   Info,
   Languages,
+  LayoutGrid,
+  LayoutList,
   Lightbulb,
   Link2,
   List,
