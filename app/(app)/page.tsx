@@ -1,15 +1,14 @@
-import { format, getDayOfYear } from "date-fns";
 import { HomeContent } from "@/components/home/HomeContent";
 import { computeHabitProgress } from "@/lib/habits";
 import { sortCompletedToday } from "@/lib/tasks";
 import { attachImageUrls } from "@/lib/task-images";
+import { getUserToday } from "@/lib/server-today";
 import { createClient } from "@/lib/supabase/server";
 import type { Category, Habit, HabitLog, Task } from "@/lib/types";
 
 export default async function HomePage() {
   const supabase = await createClient();
-  const now = new Date();
-  const today = format(now, "yyyy-MM-dd");
+  const { today, hour, dayOfYear } = await getUserToday();
 
   const [
     { data: tasks },
@@ -66,9 +65,9 @@ export default async function HomePage() {
   return (
     <HomeContent
       userName={profile?.full_name ?? ""}
-      hour={now.getHours()}
+      hour={hour}
       today={today}
-      dayOfYear={getDayOfYear(now)}
+      dayOfYear={dayOfYear}
       tasks={allTasks}
       completedToday={sortCompletedToday((completedTodayTasks ?? []) as Task[])}
       categories={allCategories}

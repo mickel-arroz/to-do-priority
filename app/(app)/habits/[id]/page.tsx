@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { format } from "date-fns";
 import { HabitDetailContent } from "@/components/habits/HabitDetailContent";
+import { getUserToday } from "@/lib/server-today";
 import { createClient } from "@/lib/supabase/server";
 import type { Habit, HabitLog, Task } from "@/lib/types";
 
@@ -11,7 +11,7 @@ export default async function HabitDetailPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
-  const today = format(new Date(), "yyyy-MM-dd");
+  const { today } = await getUserToday();
 
   const { data: habit } = await supabase
     .from("habits")

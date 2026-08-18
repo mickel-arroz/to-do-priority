@@ -1,11 +1,11 @@
-import { format } from "date-fns";
 import { HabitsContent } from "@/components/habits/HabitsContent";
+import { getUserToday } from "@/lib/server-today";
 import { createClient } from "@/lib/supabase/server";
 import type { Habit, HabitLog, Task } from "@/lib/types";
 
 export default async function HabitsPage() {
   const supabase = await createClient();
-  const today = format(new Date(), "yyyy-MM-dd");
+  const { today } = await getUserToday();
 
   const [{ data: habits }, { data: logs }, { data: tasks }] = await Promise.all([
     supabase

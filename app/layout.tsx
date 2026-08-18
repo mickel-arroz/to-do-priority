@@ -53,6 +53,18 @@ export default async function RootLayout({
       className={`${robotoCondensed.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        {/* Guarda la zona horaria real del dispositivo en una cookie antes de
+            hidratar (patrón anti-parpadeo, sin useEffect). El servidor la lee
+            en getUserToday() para calcular "hoy" en la hora local del usuario.
+            Solo reescribe si cambió (p. ej. al viajar), así que es casi gratis. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){try{var tz=Intl.DateTimeFormat().resolvedOptions().timeZone;" +
+              "if(tz&&document.cookie.split('; ').indexOf('tz='+tz)===-1){" +
+              "document.cookie='tz='+tz+';path=/;max-age=31536000;samesite=lax'}}catch(e){}})();",
+          }}
+        />
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
           <LocaleProvider initialLocale={locale}>
             <GridPattern

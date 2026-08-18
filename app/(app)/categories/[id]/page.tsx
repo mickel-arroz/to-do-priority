@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
-import { format } from "date-fns";
 import { CategoryContent } from "@/components/categories/CategoryContent";
 import { sortByDateAndPriority } from "@/lib/tasks";
 import { attachImageUrls } from "@/lib/task-images";
+import { getUserToday } from "@/lib/server-today";
 import { createClient } from "@/lib/supabase/server";
 import type { Category, Task } from "@/lib/types";
 
@@ -13,7 +13,7 @@ export default async function CategoryPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
-  const today = format(new Date(), "yyyy-MM-dd");
+  const { today } = await getUserToday();
 
   const [{ data: category }, { data: tasks }, { data: categories }] =
     await Promise.all([
