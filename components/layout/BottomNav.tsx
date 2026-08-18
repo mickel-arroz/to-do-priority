@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, List, Menu, Target } from "@/components/icons";
+import { GoalReplace, Home, ListDetails, Menu } from "@/components/icons";
 import { useT } from "@/lib/i18n/locale-context";
 import { cn } from "@/lib/utils";
 
@@ -38,7 +38,7 @@ export function BottomNav({ menuOpen, onToggleMenu }: BottomNavProps) {
         href="/habits"
         className={itemClass(!menuOpen && pathname.startsWith("/habits"))}
       >
-        <Target className="size-5" />
+        <GoalReplace className="size-5" />
         {t.nav.habits}
       </Link>
       <Link
@@ -49,7 +49,7 @@ export function BottomNav({ menuOpen, onToggleMenu }: BottomNavProps) {
         )}
         data-testid="nav-lists"
       >
-        <List className="size-5" />
+        <ListDetails className="size-5" />
         {t.nav.lists}
       </Link>
       <button

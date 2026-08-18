@@ -1,9 +1,32 @@
 import { act, fireEvent, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { PomodoroDialog } from "@/components/tasks/PomodoroDialog";
+import {
+  PomodoroProvider,
+  usePomodoroController,
+} from "@/components/pomodoro/PomodoroProvider";
+import type { Task } from "@/lib/types";
 import { makeTask, renderWithProviders } from "./helpers";
 
 const playMock = vi.fn().mockResolvedValue(undefined);
+
+/** Opens the global pomodoro for a task, the way a task row would. */
+function Opener({ task }: { task: Task }) {
+  const { openPomodoro } = usePomodoroController();
+  return (
+    <button data-testid="open-pomodoro" onClick={() => openPomodoro(task)}>
+      open
+    </button>
+  );
+}
+
+function renderPomodoro(task: Task) {
+  renderWithProviders(
+    <PomodoroProvider>
+      <Opener task={task} />
+    </PomodoroProvider>
+  );
+  fireEvent.click(screen.getByTestId("open-pomodoro"));
+}
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -25,13 +48,13 @@ afterEach(() => {
 describe("PomodoroDialog", () => {
   it("shows the configured minutes for the task", () => {
     const task = makeTask({ pomodoro_minutes: 10 });
-    renderWithProviders(<PomodoroDialog task={task} onOpenChange={vi.fn()} />);
+    renderPomodoro(task);
     expect(screen.getByTestId("pomodoro-time")).toHaveTextContent("10:00");
   });
 
   it("counts down while running", () => {
     const task = makeTask({ pomodoro_minutes: 1 });
-    renderWithProviders(<PomodoroDialog task={task} onOpenChange={vi.fn()} />);
+    renderPomodoro(task);
 
     fireEvent.click(screen.getByTestId("pomodoro-start"));
     act(() => {
@@ -42,7 +65,7 @@ describe("PomodoroDialog", () => {
 
   it("plays the chime when reaching zero", () => {
     const task = makeTask({ pomodoro_minutes: 1 });
-    renderWithProviders(<PomodoroDialog task={task} onOpenChange={vi.fn()} />);
+    renderPomodoro(task);
 
     fireEvent.click(screen.getByTestId("pomodoro-start"));
     act(() => {
@@ -54,7 +77,7 @@ describe("PomodoroDialog", () => {
 
   it("pauses and resumes", () => {
     const task = makeTask({ pomodoro_minutes: 1 });
-    renderWithProviders(<PomodoroDialog task={task} onOpenChange={vi.fn()} />);
+    renderPomodoro(task);
 
     fireEvent.click(screen.getByTestId("pomodoro-start"));
     act(() => {

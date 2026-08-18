@@ -2,7 +2,14 @@
 
 import { format } from "date-fns";
 import { enUS, es as esLocale } from "date-fns/locale";
-import { Check, RotateCcw, X } from "@/components/icons";
+import {
+  CalendarDays,
+  Check,
+  Link2,
+  ListChecks,
+  RotateCcw,
+  X,
+} from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
@@ -13,9 +20,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { CategoryIcon } from "@/components/categories/CategoryIcon";
+import { PriorityTag } from "@/components/tasks/PriorityTag";
 import { useTaskBoard } from "@/components/tasks/TaskBoard";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { priorityClasses } from "@/lib/priority";
+import { parseDate } from "@/lib/recurrence";
 import type { CompletedTask, Task } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -26,8 +35,10 @@ type CompletedTaskRowProps = {
 };
 
 /**
- * Muted row for a completed task. The status icon opens a menu to edit the
- * status: switch yes/no or unmark it back to pending (mis-swipes happen).
+ * Completed task row. Mirrors the pending TaskRow layout (checkbox · title ·
+ * priority tag + due date) so both look the same — the only difference is the
+ * struck-through, muted title. The checkbox opens a menu to switch yes/no or
+ * revive it to pending (mis-swipes happen).
  */
 export function CompletedTaskRow({
   task,
@@ -37,6 +48,10 @@ export function CompletedTaskRow({
   const board = useTaskBoard();
   const dateLocale = locale === "es" ? esLocale : enUS;
   const categories = "categories" in task ? task.categories : null;
+  const p = priorityClasses[task.priority];
+
+  const doneSubtasks = task.subtasks?.filter((s) => s.is_done).length ?? 0;
+  const totalSubtasks = task.subtasks?.length ?? 0;
 
   function changeStatus(status: "pending" | "yes" | "no") {
     if (status === task.status) return;
@@ -47,15 +62,25 @@ export function CompletedTaskRow({
   return (
     <div
       data-testid={`completed-row-${task.id}`}
-      className="flex items-center gap-3 rounded-lg border bg-muted px-3 py-2.5 text-sm text-muted-foreground"
+      className="relative flex items-center gap-3 rounded-lg border bg-muted py-3 pl-4 pr-3 text-muted-foreground"
     >
+      {/* Priority side bar, dimmed to keep the completed row muted */}
+      <div
+        className={cn(
+          "absolute inset-y-0 left-0 w-1.5 rounded-l-lg opacity-50",
+          p.bar
+        )}
+        aria-hidden
+      />
+
+      {/* Checkbox (checked): opens the status menu */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button
             aria-label={t.tasks.changeStatus}
             data-testid="status-button"
             className={cn(
-              "flex size-6 shrink-0 items-center justify-center rounded-md text-on-strong transition-transform hover:scale-110 disabled:opacity-50",
+              "flex size-6 shrink-0 items-center justify-center rounded-md text-on-strong transition-transform hover:scale-110",
               task.status === "yes" ? "bg-success" : "bg-failure"
             )}
             title={t.tasks.changeStatus}
@@ -97,16 +122,26 @@ export function CompletedTaskRow({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <span
-        className={cn(
-          "size-2 shrink-0 rounded-full opacity-60",
-          priorityClasses[task.priority].dot
-        )}
-        title={`P${task.priority}`}
-      />
-      <span className="min-w-0 flex-1 truncate line-through decoration-muted-foreground/40">
-        {task.title}
-      </span>
+      <div className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-medium line-through decoration-muted-foreground/40">
+          {task.title}
+        </span>
+        <span className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
+          <PriorityTag priority={task.priority} className="opacity-70" />
+          <span className="flex items-center gap-1">
+            <CalendarDays className="size-3.5" />
+            {format(parseDate(task.due_date), "d MMM", { locale: dateLocale })}
+          </span>
+          {totalSubtasks > 0 && (
+            <span className="flex items-center gap-1">
+              <ListChecks className="size-3.5" />
+              {doneSubtasks}/{totalSubtasks}
+            </span>
+          )}
+          {task.link && <Link2 className="size-3.5" />}
+        </span>
+      </div>
+
       {showCategory && categories && (
         <Badge
           variant="outline"

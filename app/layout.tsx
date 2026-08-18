@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Roboto_Condensed } from "next/font/google";
 import { cookies } from "next/headers";
 import { ThemeProvider } from "next-themes";
+import { PomodoroProvider } from "@/components/pomodoro/PomodoroProvider";
 import { ServiceWorkerRegistrar } from "@/components/pwa/ServiceWorkerRegistrar";
 import { GridPattern } from "@/components/ui/grid-pattern";
 import { Toaster } from "@/components/ui/sonner";
@@ -58,7 +59,7 @@ export default async function RootLayout({
               className="fixed inset-0 -z-10 fill-foreground/[0.09] stroke-foreground/[0.09] [mask-image:radial-gradient(ellipse_at_center,white,transparent_70%)]"
               aria-hidden="true"
             />
-            {children}
+            <PomodoroProvider>{children}</PomodoroProvider>
             <Toaster position="top-center" richColors />
             <ServiceWorkerRegistrar />
           </LocaleProvider>

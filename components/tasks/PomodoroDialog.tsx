@@ -10,30 +10,33 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { formatCountdown, usePomodoro } from "@/hooks/usePomodoro";
+import { usePomodoroController } from "@/components/pomodoro/PomodoroProvider";
+import { formatCountdown } from "@/hooks/usePomodoro";
 import { useT } from "@/lib/i18n/locale-context";
-import type { Task } from "@/lib/types";
 import { cn } from "@/lib/utils";
-
-type PomodoroDialogProps = {
-  task: Task | null;
-  onOpenChange: (open: boolean) => void;
-};
 
 const RADIUS = 88;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
-export function PomodoroDialog({ task, onOpenChange }: PomodoroDialogProps) {
+/**
+ * Full pomodoro dialog. State lives in the app-wide PomodoroProvider, so
+ * closing this dialog only minimizes it to the floating widget — the timer
+ * keeps running.
+ */
+export function PomodoroDialog() {
   const t = useT();
-  const minutes = task?.pomodoro_minutes ?? 25;
-  const { state, remaining, totalSeconds, start, pause, reset, setMinutes } =
-    usePomodoro(minutes);
-
-  useEffect(() => {
-    if (task) reset(task.pomodoro_minutes);
-    // Reset only when a different task opens the dialog
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [task?.id]);
+  const {
+    activeTask: task,
+    dialogOpen,
+    state,
+    remaining,
+    totalSeconds,
+    start,
+    pause,
+    reset,
+    setMinutes,
+    closeDialog,
+  } = usePomodoroController();
 
   useEffect(() => {
     if (!task) return;
@@ -48,11 +51,16 @@ export function PomodoroDialog({ task, onOpenChange }: PomodoroDialogProps) {
   const progress = totalSeconds === 0 ? 0 : remaining / totalSeconds;
 
   return (
-    <Dialog open={task !== null} onOpenChange={onOpenChange}>
+    <Dialog
+      open={dialogOpen && task !== null}
+      onOpenChange={(open) => !open && closeDialog()}
+    >
       <DialogContent className="sm:max-w-sm" data-testid="pomodoro-dialog">
         <DialogHeader>
           <DialogTitle>{t.pomodoro.title}</DialogTitle>
-          <DialogDescription className="truncate">{task?.title}</DialogDescription>
+          <DialogDescription className="truncate">
+            {task?.title}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="relative mx-auto my-2 size-52">
@@ -133,7 +141,11 @@ export function PomodoroDialog({ task, onOpenChange }: PomodoroDialogProps) {
             </Button>
           )}
           {state !== "idle" && (
-            <Button variant="ghost" onClick={() => reset()} data-testid="pomodoro-reset">
+            <Button
+              variant="ghost"
+              onClick={() => reset()}
+              data-testid="pomodoro-reset"
+            >
               <RotateCcw className="size-4" />
               {t.pomodoro.reset}
             </Button>

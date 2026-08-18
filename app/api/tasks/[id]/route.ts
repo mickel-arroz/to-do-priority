@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { isUnauthorized, jsonError, requireUser } from "@/app/api/_lib/auth";
-import { taskSchema } from "@/app/api/_lib/schemas";
+import { taskSchema, validationErrorResponse } from "@/app/api/_lib/schemas";
 
 export async function PATCH(
   request: Request,
@@ -12,7 +12,7 @@ export async function PATCH(
   const { id } = await params;
   const body = await request.json().catch(() => null);
   const parsed = taskSchema.partial().safeParse(body);
-  if (!parsed.success) return jsonError("invalid_payload", 400);
+  if (!parsed.success) return validationErrorResponse(parsed.error);
 
   const taskInput = { ...parsed.data };
   delete taskInput.subtasks;

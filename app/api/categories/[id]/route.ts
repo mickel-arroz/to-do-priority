@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isUnauthorized, jsonError, requireUser } from "@/app/api/_lib/auth";
+import { validationErrorResponse } from "@/app/api/_lib/schemas";
+import { LIMITS } from "@/lib/limits";
 
 const renameSchema = z.object({
-  name: z.string().trim().min(1).max(60).optional(),
+  name: z.string().trim().min(1).max(LIMITS.categoryName).optional(),
   icon: z.string().max(30).optional(),
   color: z
     .string()
@@ -21,7 +23,7 @@ export async function PATCH(
   const { id } = await params;
   const body = await request.json().catch(() => null);
   const parsed = renameSchema.safeParse(body);
-  if (!parsed.success) return jsonError("invalid_payload", 400);
+  if (!parsed.success) return validationErrorResponse(parsed.error);
 
   const { data, error } = await ctx.supabase
     .from("categories")

@@ -50,6 +50,19 @@ describe("getNextDueDate", () => {
         )
       ).toBe("2026-08-15");
     });
+
+    it("adds N days when no weekdays are set (every-N-days mode)", () => {
+      expect(
+        getNextDueDate(
+          config({
+            recurrence_type: "daily",
+            recurrence_weekdays: [],
+            recurrence_interval: 3,
+          }),
+          "2026-08-14"
+        )
+      ).toBe("2026-08-17");
+    });
   });
 
   describe("weekly", () => {
@@ -96,6 +109,15 @@ describe("getNextDueDate", () => {
         getNextDueDate(config({ recurrence_type: "monthly" }), "2028-01-31")
       ).toBe("2028-02-29");
     });
+
+    it("adds N months", () => {
+      expect(
+        getNextDueDate(
+          config({ recurrence_type: "monthly", recurrence_interval: 3 }),
+          "2026-08-14"
+        )
+      ).toBe("2026-11-14");
+    });
   });
 
   describe("yearly", () => {
@@ -109,6 +131,15 @@ describe("getNextDueDate", () => {
       expect(
         getNextDueDate(config({ recurrence_type: "yearly" }), "2028-02-29")
       ).toBe("2029-02-28");
+    });
+
+    it("adds N years", () => {
+      expect(
+        getNextDueDate(
+          config({ recurrence_type: "yearly", recurrence_interval: 2 }),
+          "2026-08-14"
+        )
+      ).toBe("2028-08-14");
     });
   });
 });

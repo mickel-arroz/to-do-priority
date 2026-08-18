@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Info, PanelLeft, Plus, Target } from "@/components/icons";
+import { GoalReplace, Home, Info, PanelLeft, Plus } from "@/components/icons";
 import { Logo } from "@/components/layout/Logo";
 import { CategoryIcon } from "@/components/categories/CategoryIcon";
 import { Badge } from "@/components/ui/badge";
@@ -99,7 +99,7 @@ export function Sidebar({ user, categories, onNewCategory }: SidebarProps) {
           className={linkClass(pathname.startsWith("/habits"))}
           title={t.nav.habits}
         >
-          <Target className="size-5 shrink-0" />
+          <GoalReplace className="size-5 shrink-0" />
           {expanded && <span>{t.nav.habits}</span>}
         </Link>
 

@@ -13,8 +13,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { CharCounter } from "@/components/ui/char-counter";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NumberInput } from "@/components/ui/number-input";
 import {
   Select,
   SelectContent,
@@ -29,8 +31,11 @@ import {
   type RecurrenceValue,
 } from "@/components/tasks/RecurrencePicker";
 import { api, type TaskInput } from "@/lib/api/client";
+import { apiErrorMessage } from "@/lib/api/error-message";
 import { useT } from "@/lib/i18n/locale-context";
+import { LIMITS } from "@/lib/limits";
 import type { Category, Priority, Task } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 type TaskFormDialogProps = {
   open: boolean;
@@ -67,7 +72,20 @@ export function TaskFormDialog({
   });
   const [newSubtasks, setNewSubtasks] = useState<string[]>([]);
   const [subtaskDraft, setSubtaskDraft] = useState("");
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editingValue, setEditingValue] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // Live character-limit checks: block submit while any field overflows, but
+  // still let the user keep typing (fields turn red via aria-invalid).
+  const titleOver = title.length > LIMITS.taskTitle;
+  const descriptionOver = description.length > LIMITS.taskDescription;
+  const subtaskDraftOver = subtaskDraft.length > LIMITS.subtaskTitle;
+  const subtasksOver =
+    newSubtasks.some((s) => s.length > LIMITS.subtaskTitle) ||
+    (editingIndex !== null && editingValue.length > LIMITS.subtaskTitle);
+  const hasOverflow =
+    titleOver || descriptionOver || subtaskDraftOver || subtasksOver;
 
   // Derived-state-during-render: repopulate the form whenever it opens
   const [prevKey, setPrevKey] = useState<string | null>(null);
@@ -95,19 +113,38 @@ export function TaskFormDialog({
       });
       setNewSubtasks([]);
       setSubtaskDraft("");
+      setEditingIndex(null);
+      setEditingValue("");
     }
   }
 
   function addSubtask() {
     const draft = subtaskDraft.trim();
-    if (!draft) return;
+    if (!draft || draft.length > LIMITS.subtaskTitle) return;
     setNewSubtasks((prev) => [...prev, draft]);
     setSubtaskDraft("");
   }
 
+  function startEdit(index: number) {
+    setEditingIndex(index);
+    setEditingValue(newSubtasks[index]);
+  }
+
+  function commitEdit() {
+    if (editingIndex === null) return;
+    const v = editingValue.trim();
+    setNewSubtasks((prev) =>
+      v
+        ? prev.map((s, j) => (j === editingIndex ? v : s))
+        : prev.filter((_, j) => j !== editingIndex)
+    );
+    setEditingIndex(null);
+    setEditingValue("");
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!title.trim() || !dueDate || !categoryId) return;
+    if (!title.trim() || !dueDate || !categoryId || hasOverflow) return;
 
     const input: TaskInput = {
       title: title.trim(),
@@ -134,8 +171,8 @@ export function TaskFormDialog({
       }
       onOpenChange(false);
       router.refresh();
-    } catch {
-      toast.error(t.common.error);
+    } catch (err) {
+      toast.error(apiErrorMessage(err, t));
     } finally {
       setSaving(false);
     }
@@ -149,26 +186,39 @@ export function TaskFormDialog({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="task-title">{t.tasks.title} *</Label>
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="task-title">{t.tasks.title} *</Label>
+              <CharCounter length={title.length} max={LIMITS.taskTitle} />
+            </div>
             <Input
               id="task-title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
+              aria-invalid={titleOver}
               data-testid="task-title-input"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="task-description">
-              {t.tasks.description}{" "}
-              <span className="text-muted-foreground">({t.common.optional})</span>
-            </Label>
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="task-description">
+                {t.tasks.description}{" "}
+                <span className="text-muted-foreground">
+                  ({t.common.optional})
+                </span>
+              </Label>
+              <CharCounter
+                length={description.length}
+                max={LIMITS.taskDescription}
+              />
+            </div>
             <Textarea
               id="task-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
+              aria-invalid={descriptionOver}
             />
           </div>
 
@@ -239,18 +289,13 @@ export function TaskFormDialog({
 
               <div className="space-y-2">
                 <Label htmlFor="task-pomodoro">{t.tasks.pomodoro}</Label>
-                <Input
+                <NumberInput
                   id="task-pomodoro"
-                  type="number"
                   min={0}
                   max={180}
                   placeholder="0"
-                  value={pomodoro === 0 ? "" : pomodoro}
-                  onChange={(e) =>
-                    setPomodoro(
-                      Math.min(180, Math.max(0, Number(e.target.value) || 0))
-                    )
-                  }
+                  value={pomodoro}
+                  onChange={setPomodoro}
                 />
               </div>
             </div>
@@ -261,31 +306,79 @@ export function TaskFormDialog({
               <Label htmlFor="task-subtask">{t.tasks.subtasks}</Label>
               {newSubtasks.length > 0 && (
                 <ul className="space-y-1">
-                  {newSubtasks.map((s, i) => (
-                    <li
-                      key={`${s}-${i}`}
-                      className="flex items-center justify-between rounded-lg bg-muted px-3 py-1.5 text-sm"
-                    >
-                      <span className="truncate">{s}</span>
-                      <button
-                        type="button"
-                        aria-label={t.common.delete}
-                        onClick={() =>
-                          setNewSubtasks((prev) => prev.filter((_, j) => j !== i))
-                        }
+                  {newSubtasks.map((s, i) => {
+                    const editing = editingIndex === i;
+                    return (
+                      <li
+                        key={i}
+                        className="flex items-start gap-2 rounded-lg bg-muted px-3 py-1.5 text-sm"
                       >
-                        <X className="size-4 text-muted-foreground" />
-                      </button>
-                    </li>
-                  ))}
+                        {editing ? (
+                          <Input
+                            autoFocus
+                            value={editingValue}
+                            aria-invalid={
+                              editingValue.length > LIMITS.subtaskTitle
+                            }
+                            onChange={(e) => setEditingValue(e.target.value)}
+                            onBlur={commitEdit}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                commitEdit();
+                              } else if (e.key === "Escape") {
+                                setEditingIndex(null);
+                                setEditingValue("");
+                              }
+                            }}
+                            className="h-7"
+                            data-testid={`subtask-edit-${i}`}
+                          />
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => startEdit(i)}
+                            className={cn(
+                              "min-w-0 flex-1 whitespace-normal break-words text-left",
+                              s.length > LIMITS.subtaskTitle && "text-failure"
+                            )}
+                            title={t.common.edit}
+                          >
+                            {s}
+                          </button>
+                        )}
+                        {!editing && (
+                          <button
+                            type="button"
+                            aria-label={t.common.delete}
+                            className="mt-0.5 shrink-0"
+                            onClick={() =>
+                              setNewSubtasks((prev) =>
+                                prev.filter((_, j) => j !== i)
+                              )
+                            }
+                          >
+                            <X className="size-4 text-muted-foreground" />
+                          </button>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
+              <div className="flex items-center justify-end">
+                <CharCounter
+                  length={subtaskDraft.length}
+                  max={LIMITS.subtaskTitle}
+                />
+              </div>
               <div className="flex gap-2">
                 <Input
                   id="task-subtask"
                   value={subtaskDraft}
                   onChange={(e) => setSubtaskDraft(e.target.value)}
                   placeholder={t.tasks.addSubtask}
+                  aria-invalid={subtaskDraftOver}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
@@ -293,7 +386,13 @@ export function TaskFormDialog({
                     }
                   }}
                 />
-                <Button type="button" variant="outline" size="icon" onClick={addSubtask}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={addSubtask}
+                  disabled={!subtaskDraft.trim() || subtaskDraftOver}
+                >
                   <Plus className="size-4" />
                 </Button>
               </div>
@@ -307,7 +406,7 @@ export function TaskFormDialog({
             <LoadingButton
               type="submit"
               loading={saving}
-              disabled={!title.trim()}
+              disabled={!title.trim() || hasOverflow}
               data-testid="task-save"
             >
               {t.common.save}

@@ -2,37 +2,60 @@ import type { LucideIcon } from "lucide-react";
 import {
   BookOpen,
   Briefcase,
+  Broom,
   Code2,
   Dumbbell,
+  GoalReplace,
   GraduationCap,
   Heart,
   Home,
+  Languages,
   ListDetails,
   Palette,
   Plane,
   ShoppingCart,
-  Target,
+  Sprout,
   Utensils,
   Wallet,
 } from "@/components/icons";
 
-/** Curated icon set a list can be tagged with (stored by key in the DB) */
+/**
+ * Curated icon set a list can be tagged with (stored by key in the DB).
+ * `list` is reserved for the default "General" list and is NOT offered in the
+ * picker (see SELECTABLE_CATEGORY_ICONS); it stays here for resolution/fallback.
+ */
 export const CATEGORY_ICONS: Record<string, LucideIcon> = {
   list: ListDetails,
-  briefcase: Briefcase,
-  book: BookOpen,
-  graduation: GraduationCap,
-  dumbbell: Dumbbell,
-  heart: Heart,
-  home: Home,
-  cart: ShoppingCart,
-  wallet: Wallet,
-  utensils: Utensils,
-  plane: Plane,
-  palette: Palette,
-  target: Target,
-  code: Code2,
+  heart: Heart, // salud
+  dumbbell: Dumbbell, // deporte
+  graduation: GraduationCap, // universidad
+  code: Code2, // programación
+  briefcase: Briefcase, // trabajo
+  book: BookOpen, // estudios
+  sprout: Sprout, // jardinería / naturaleza
+  languages: Languages, // idiomas
+  palette: Palette, // arte
+  utensils: Utensils, // cocina
+  plane: Plane, // viajes
+  wallet: Wallet, // finanzas
+  cart: ShoppingCart, // compras
+  cleaning: Broom, // limpieza / aseo
+  home: Home, // hogar (solo resolución, no seleccionable)
+  target: GoalReplace, // metas (reservado para la página de hábitos)
 };
+
+/**
+ * Icons reserved for other purposes, kept only for resolution/fallback:
+ * `list` is the default "General" list, `target` is the Habits page icon, and
+ * `home` was retired from the picker in favor of `cleaning`.
+ */
+const RESERVED_ICONS = new Set(["list", "target", "home"]);
+
+/** Icons offered in the category picker (everything except the reserved ones) */
+export const SELECTABLE_CATEGORY_ICONS: Record<string, LucideIcon> =
+  Object.fromEntries(
+    Object.entries(CATEGORY_ICONS).filter(([key]) => !RESERVED_ICONS.has(key))
+  );
 
 export function categoryIcon(icon: string | null | undefined): LucideIcon {
   return CATEGORY_ICONS[icon ?? "list"] ?? ListDetails;

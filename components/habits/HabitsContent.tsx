@@ -2,7 +2,15 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Infinity as InfinityIcon, Plus, ShieldAlert } from "@/components/icons";
+import {
+  Check,
+  Flame,
+  Infinity as InfinityIcon,
+  ListChecks,
+  Plus,
+  ShieldAlert,
+  X,
+} from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,9 +63,10 @@ export function HabitsContent({ habits, logs, tasks, today }: HabitsContentProps
               logsByHabit.get(habit.id) ?? [],
               today
             );
+            const taskCount = habit.habit_tasks?.length ?? 0;
             return (
               <Link key={habit.id} href={`/habits/${habit.id}`} className="group">
-                <Card className="h-full transition-all group-hover:-translate-y-0.5 group-hover:shadow-md">
+                <Card className="flex h-full flex-col transition-all group-hover:-translate-y-0.5 group-hover:shadow-md">
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between gap-2">
                       <CardTitle className="text-base leading-snug">
@@ -81,9 +90,44 @@ export function HabitsContent({ habits, logs, tasks, today }: HabitsContentProps
                         <StreakBadge streak={progress.currentStreak} />
                       </div>
                     </div>
+                    {habit.description && (
+                      <p className="line-clamp-2 text-sm text-muted-foreground">
+                        {habit.description}
+                      </p>
+                    )}
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="flex flex-1 flex-col gap-3">
                     <HabitProgressBar progress={progress} />
+                    <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1 border-t pt-3 text-xs text-muted-foreground">
+                      <span
+                        className="flex items-center gap-1"
+                        title={t.habits.linkedTasks}
+                      >
+                        <ListChecks className="size-3.5" />
+                        {taskCount}
+                      </span>
+                      <span
+                        className="flex items-center gap-1"
+                        title={t.habits.completionRate}
+                      >
+                        <Flame className="size-3.5 text-streak" />
+                        {progress.completionRate}%
+                      </span>
+                      <span
+                        className="flex items-center gap-1 text-success"
+                        title={t.habits.completedDays}
+                      >
+                        <Check className="size-3.5" />
+                        {progress.completedDays}
+                      </span>
+                      <span
+                        className="flex items-center gap-1 text-failure"
+                        title={t.habits.missedDays}
+                      >
+                        <X className="size-3.5" />
+                        {progress.missedDays}
+                      </span>
+                    </div>
                   </CardContent>
                 </Card>
               </Link>

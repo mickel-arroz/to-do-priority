@@ -12,7 +12,9 @@ import type { RecurrenceType } from "@/lib/recurrence";
 export class ApiError extends Error {
   constructor(
     public status: number,
-    message: string
+    message: string,
+    /** Full parsed response body, so callers can read structured fields */
+    public body?: Record<string, unknown>
   ) {
     super(message);
   }
@@ -31,7 +33,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new ApiError(res.status, body.error ?? "request_failed");
+    throw new ApiError(res.status, body.error ?? "request_failed", body);
   }
   return body as T;
 }
@@ -83,10 +85,22 @@ export const api = {
     signout: () => request<{ ok: true }>("/api/auth/signout", { method: "POST" }),
   },
   tasks: {
-    list: (params?: { categoryId?: string }) =>
-      request<{ tasks: Task[] }>(
-        `/api/tasks${params?.categoryId ? `?categoryId=${params.categoryId}` : ""}`
-      ),
+    list: (params?: {
+      categoryId?: string;
+      q?: string;
+      limit?: number;
+      offset?: number;
+    }) => {
+      const qs = new URLSearchParams();
+      if (params?.categoryId) qs.set("categoryId", params.categoryId);
+      if (params?.q) qs.set("q", params.q);
+      if (params?.limit != null) qs.set("limit", String(params.limit));
+      if (params?.offset != null) qs.set("offset", String(params.offset));
+      const query = qs.toString();
+      return request<{ tasks: Task[]; hasMore?: boolean }>(
+        `/api/tasks${query ? `?${query}` : ""}`
+      );
+    },
     completed: (categoryId?: string) =>
       request<{ tasks: CompletedTask[] }>(
         `/api/tasks/completed${categoryId ? `?categoryId=${categoryId}` : ""}`

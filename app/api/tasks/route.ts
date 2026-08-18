@@ -1,12 +1,20 @@
 import { NextResponse } from "next/server";
 import { isUnauthorized, jsonError, requireUser } from "@/app/api/_lib/auth";
-import { taskSchema } from "@/app/api/_lib/schemas";
+import { taskSchema, validationErrorResponse } from "@/app/api/_lib/schemas";
 
 export async function GET(request: Request) {
   const ctx = await requireUser();
   if (isUnauthorized(ctx)) return ctx;
 
-  const categoryId = new URL(request.url).searchParams.get("categoryId");
+  const params = new URL(request.url).searchParams;
+  const categoryId = params.get("categoryId");
+  const q = params.get("q")?.trim();
+  const rawLimit = Number(params.get("limit"));
+  const limit =
+    Number.isFinite(rawLimit) && rawLimit > 0
+      ? Math.min(100, Math.floor(rawLimit))
+      : null;
+  const offset = Math.max(0, Math.floor(Number(params.get("offset")) || 0));
 
   let query = ctx.supabase
     .from("tasks")
@@ -16,10 +24,20 @@ export async function GET(request: Request) {
     .order("priority");
 
   if (categoryId) query = query.eq("category_id", categoryId);
+  if (q) query = query.ilike("title", `%${q}%`);
+  // Fetch one extra row to know whether there is a next page
+  if (limit !== null) query = query.range(offset, offset + limit);
 
   const { data, error } = await query;
   if (error) return jsonError(error.message, 500);
-  return NextResponse.json({ tasks: data });
+
+  let tasks = data ?? [];
+  let hasMore = false;
+  if (limit !== null && tasks.length > limit) {
+    hasMore = true;
+    tasks = tasks.slice(0, limit);
+  }
+  return NextResponse.json({ tasks, hasMore });
 }
 
 export async function POST(request: Request) {
@@ -28,7 +46,7 @@ export async function POST(request: Request) {
 
   const body = await request.json().catch(() => null);
   const parsed = taskSchema.safeParse(body);
-  if (!parsed.success) return jsonError("invalid_payload", 400);
+  if (!parsed.success) return validationErrorResponse(parsed.error);
 
   const { subtasks, ...taskInput } = parsed.data;
 

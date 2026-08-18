@@ -1,9 +1,11 @@
 // Single source for app icons: every component imports icons from here,
 // never from lucide-react directly (shadcn/ui internals excluded).
 export { ListDetails } from "@/components/icons/ListDetails";
+export { GoalReplace } from "@/components/icons/GoalReplace";
 export {
   BookOpen,
   Briefcase,
+  Broom,
   CalendarDays,
   Check,
   ChevronDown,
@@ -40,6 +42,7 @@ export {
   RotateCcw,
   ShieldAlert,
   ShoppingCart,
+  Sprout,
   Sun,
   Target,
   Timer,

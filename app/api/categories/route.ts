@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isUnauthorized, jsonError, requireUser } from "@/app/api/_lib/auth";
+import { validationErrorResponse } from "@/app/api/_lib/schemas";
+import { LIMITS } from "@/lib/limits";
 
 export async function GET() {
   const ctx = await requireUser();
@@ -18,7 +20,7 @@ export async function GET() {
 }
 
 const createSchema = z.object({
-  name: z.string().trim().min(1).max(60),
+  name: z.string().trim().min(1).max(LIMITS.categoryName),
   icon: z.string().max(30).optional(),
   color: z
     .string()
@@ -32,7 +34,7 @@ export async function POST(request: Request) {
 
   const body = await request.json().catch(() => null);
   const parsed = createSchema.safeParse(body);
-  if (!parsed.success) return jsonError("invalid_payload", 400);
+  if (!parsed.success) return validationErrorResponse(parsed.error);
 
   const { data, error } = await ctx.supabase
     .from("categories")

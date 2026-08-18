@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Check } from "@/components/icons";
 import { Button } from "@/components/ui/button";
+import { CharCounter } from "@/components/ui/char-counter";
 import { LoadingButton } from "@/components/ui/loading-button";
 import {
   Dialog,
@@ -17,10 +18,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   CATEGORY_COLORS,
-  CATEGORY_ICONS,
+  SELECTABLE_CATEGORY_ICONS,
 } from "@/components/categories/categoryMeta";
 import { api, ApiError } from "@/lib/api/client";
+import { apiErrorMessage } from "@/lib/api/error-message";
 import { useT } from "@/lib/i18n/locale-context";
+import { LIMITS } from "@/lib/limits";
 import type { Category } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -38,8 +41,11 @@ export function CategoryFormDialog({
 }: CategoryFormDialogProps) {
   const t = useT();
   const router = useRouter();
+  // Default (General) list keeps the reserved `list` icon and can't change it
+  const isDefaultList = category?.is_default ?? false;
+
   const [name, setName] = useState("");
-  const [icon, setIcon] = useState("list");
+  const [icon, setIcon] = useState("heart");
   const [color, setColor] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -49,15 +55,17 @@ export function CategoryFormDialog({
     setPrevOpen(open);
     if (open) {
       setName(category?.name ?? "");
-      setIcon(category?.icon ?? "list");
+      setIcon(category?.icon ?? "heart");
       setColor(category?.color ?? null);
     }
   }
 
+  const nameOver = name.length > LIMITS.categoryName;
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const trimmed = name.trim();
-    if (!trimmed) return;
+    if (!trimmed || nameOver) return;
 
     setSaving(true);
     try {
@@ -70,7 +78,7 @@ export function CategoryFormDialog({
       toast.error(
         err instanceof ApiError && err.status === 409
           ? t.categories.nameTaken
-          : t.common.error
+          : apiErrorMessage(err, t)
       );
     } finally {
       setSaving(false);
@@ -87,38 +95,44 @@ export function CategoryFormDialog({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="category-name">{t.categories.name}</Label>
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="category-name">{t.categories.name}</Label>
+              <CharCounter length={name.length} max={LIMITS.categoryName} />
+            </div>
             <Input
               id="category-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               autoFocus
+              aria-invalid={nameOver}
               data-testid="category-name-input"
             />
           </div>
 
-          <div className="space-y-2">
-            <Label>{t.categories.icon}</Label>
-            <div className="grid grid-cols-7 gap-1.5">
-              {Object.entries(CATEGORY_ICONS).map(([key, Icon]) => (
-                <button
-                  key={key}
-                  type="button"
-                  aria-pressed={icon === key}
-                  onClick={() => setIcon(key)}
-                  data-testid={`icon-${key}`}
-                  className={cn(
-                    "flex aspect-square items-center justify-center rounded-md border transition-colors",
-                    icon === key
-                      ? "border-primary bg-accent text-primary"
-                      : "border-transparent text-muted-foreground hover:bg-muted"
-                  )}
-                >
-                  <Icon className="size-4" />
-                </button>
-              ))}
+          {!isDefaultList && (
+            <div className="space-y-2">
+              <Label>{t.categories.icon}</Label>
+              <div className="grid grid-cols-7 gap-1.5">
+                {Object.entries(SELECTABLE_CATEGORY_ICONS).map(([key, Icon]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    aria-pressed={icon === key}
+                    onClick={() => setIcon(key)}
+                    data-testid={`icon-${key}`}
+                    className={cn(
+                      "flex aspect-square items-center justify-center rounded-md border transition-colors",
+                      icon === key
+                        ? "border-primary bg-accent text-primary"
+                        : "border-transparent text-muted-foreground hover:bg-muted"
+                    )}
+                  >
+                    <Icon className="size-4" />
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="space-y-2">
             <Label>{t.categories.color}</Label>
@@ -150,7 +164,7 @@ export function CategoryFormDialog({
             <LoadingButton
               type="submit"
               loading={saving}
-              disabled={!name.trim()}
+              disabled={!name.trim() || nameOver}
               data-testid="category-save"
             >
               {t.common.save}

@@ -6,7 +6,7 @@ export type RecurrenceConfig = {
   recurrence_type: RecurrenceType;
   /** 0=Sunday .. 6=Saturday; only for daily */
   recurrence_weekdays: number[] | null;
-  /** every N weeks; only for weekly */
+  /** every N weeks/months/years; used by weekly, monthly and yearly */
   recurrence_interval: number;
 };
 
@@ -36,10 +36,13 @@ export function getNextDueDate(
       return null;
 
     case "daily": {
-      const weekdays =
-        config.recurrence_weekdays && config.recurrence_weekdays.length > 0
-          ? config.recurrence_weekdays
-          : [0, 1, 2, 3, 4, 5, 6];
+      // Two sub-modes: specific weekdays, or a plain "every N days" (encoded
+      // by an empty/null weekday list, using the interval).
+      const weekdays = config.recurrence_weekdays ?? [];
+      if (weekdays.length === 0) {
+        const interval = Math.max(1, config.recurrence_interval || 1);
+        return formatDate(addDays(from, interval));
+      }
       for (let i = 1; i <= 7; i++) {
         const candidate = addDays(from, i);
         if (weekdays.includes(getDay(candidate))) return formatDate(candidate);
@@ -52,11 +55,15 @@ export function getNextDueDate(
       return formatDate(addWeeks(from, interval));
     }
 
-    case "monthly":
+    case "monthly": {
       // date-fns clamps Jan 31 -> Feb 28/29 automatically
-      return formatDate(addMonths(from, 1));
+      const interval = Math.max(1, config.recurrence_interval || 1);
+      return formatDate(addMonths(from, interval));
+    }
 
-    case "yearly":
-      return formatDate(addYears(from, 1));
+    case "yearly": {
+      const interval = Math.max(1, config.recurrence_interval || 1);
+      return formatDate(addYears(from, interval));
+    }
   }
 }

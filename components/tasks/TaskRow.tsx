@@ -5,7 +5,15 @@ import { motion, useMotionValue, useTransform } from "motion/react";
 import { format } from "date-fns";
 import { enUS, es as esLocale } from "date-fns/locale";
 import { CalendarDays, Check, Link2, ListChecks, Timer, X } from "@/components/icons";
-import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { PriorityTag } from "@/components/tasks/PriorityTag";
 import { priorityClasses } from "@/lib/priority";
 import { parseDate } from "@/lib/recurrence";
 import { useLocale } from "@/lib/i18n/locale-context";
@@ -23,10 +31,10 @@ type TaskRowProps = {
 };
 
 /**
- * Swipeable task row: dragging right past the threshold completes it
- * satisfactorily ('yes', green), left completes it unsatisfactorily
- * ('no', red). The priority color carries strong visual weight: thick
- * side bar, soft background tint and a numbered badge.
+ * Swipeable task row. Dragging right past the threshold completes it
+ * satisfactorily ('yes', green), left completes it unsatisfactorily ('no',
+ * red). The leading checkbox opens a menu with the same actions (mark
+ * done/failed); the priority is a small colored tag next to the due date.
  */
 export function TaskRow({
   task,
@@ -113,15 +121,39 @@ export function TaskRow({
           />
         )}
 
-        <Badge
-          className={cn(
-            "size-7 shrink-0 justify-center rounded-md p-0 font-heading text-sm font-bold text-on-strong",
-            p.bar
-          )}
-          title={`P${task.priority}`}
-        >
-          {task.priority}
-        </Badge>
+        {/* Checkbox: opens a menu to mark the task done or failed */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              onClick={(e) => e.stopPropagation()}
+              aria-label={t.tasks.changeStatus}
+              data-testid="status-button"
+              title={t.tasks.changeStatus}
+              className="flex size-6 shrink-0 items-center justify-center rounded-md border-2 border-muted-foreground/40 text-transparent transition-colors hover:border-primary hover:text-primary"
+            >
+              <Check className="size-3.5" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuLabel>{t.tasks.changeStatus}</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => onComplete(task, "yes")}
+              data-testid="status-yes"
+            >
+              <Check className="size-4 text-success" />
+              {t.tasks.completedYes}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => onComplete(task, "no")}
+              data-testid="status-no"
+            >
+              <X className="size-4 text-failure" />
+              {t.tasks.completedNo}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         <button
           className="min-w-0 flex-1 text-left"
@@ -130,6 +162,7 @@ export function TaskRow({
         >
           <span className="block truncate text-sm font-medium">{task.title}</span>
           <span className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
+            <PriorityTag priority={task.priority} />
             <span
               className={cn(
                 "flex items-center gap-1",

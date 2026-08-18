@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { isUnauthorized, jsonError, requireUser } from "@/app/api/_lib/auth";
-import { habitSchema } from "@/app/api/_lib/schemas";
+import { habitUpdateSchema, validationErrorResponse } from "@/app/api/_lib/schemas";
 
 export async function GET(
   _request: Request,
@@ -41,8 +41,8 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await request.json().catch(() => null);
-  const parsed = habitSchema.partial().safeParse(body);
-  if (!parsed.success) return jsonError("invalid_payload", 400);
+  const parsed = habitUpdateSchema.safeParse(body);
+  if (!parsed.success) return validationErrorResponse(parsed.error);
 
   const { task_ids, ...habitInput } = parsed.data;
 

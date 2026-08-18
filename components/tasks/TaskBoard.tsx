@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { celebrate } from "@/components/feedback/celebrate";
-import { PomodoroDialog } from "@/components/tasks/PomodoroDialog";
+import { usePomodoroController } from "@/components/pomodoro/PomodoroProvider";
 import { TaskDetailDialog } from "@/components/tasks/TaskDetailDialog";
 import { TaskFormDialog } from "@/components/tasks/TaskFormDialog";
 import { TaskRow } from "@/components/tasks/TaskRow";
@@ -58,7 +58,7 @@ export function TaskBoard({
 }: TaskBoardProps) {
   const { t } = useLocale();
   const router = useRouter();
-  const [pomodoroTask, setPomodoroTask] = useState<Task | null>(null);
+  const pomodoro = usePomodoroController();
   const [detailTask, setDetailTask] = useState<Task | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [formTask, setFormTask] = useState<Task | null>(null);
@@ -175,17 +175,13 @@ export function TaskBoard({
         completedVersion,
         completeTask,
         changeTaskStatus,
-        openPomodoro: setPomodoroTask,
+        openPomodoro: pomodoro.openPomodoro,
         openDetail: setDetailTask,
         openNewTask,
       }}
     >
       {children}
 
-      <PomodoroDialog
-        task={pomodoroTask}
-        onOpenChange={(open) => !open && setPomodoroTask(null)}
-      />
       <TaskDetailDialog
         task={detailTask}
         categories={categories}
