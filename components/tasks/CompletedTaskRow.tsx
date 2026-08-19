@@ -2,26 +2,11 @@
 
 import { format } from "date-fns";
 import { enUS, es as esLocale } from "date-fns/locale";
-import {
-  CalendarDays,
-  Check,
-  Link2,
-  ListChecks,
-  RotateCcw,
-  X,
-} from "@/components/icons";
+import { CalendarDays, Link2, ListChecks } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { CategoryIcon } from "@/components/categories/CategoryIcon";
+import { CompletedStatusMenu } from "@/components/tasks/CompletedStatusMenu";
 import { PriorityTag } from "@/components/tasks/PriorityTag";
-import { useTaskBoard } from "@/components/tasks/TaskBoard";
 import { useLocale } from "@/lib/i18n/locale-context";
 import { priorityClasses } from "@/lib/priority";
 import { parseDate } from "@/lib/recurrence";
@@ -45,19 +30,12 @@ export function CompletedTaskRow({
   showCategory = false,
 }: CompletedTaskRowProps) {
   const { locale, t } = useLocale();
-  const board = useTaskBoard();
   const dateLocale = locale === "es" ? esLocale : enUS;
   const categories = "categories" in task ? task.categories : null;
   const p = priorityClasses[task.priority];
 
   const doneSubtasks = task.subtasks?.filter((s) => s.is_done).length ?? 0;
   const totalSubtasks = task.subtasks?.length ?? 0;
-
-  function changeStatus(status: "pending" | "yes" | "no") {
-    if (status === task.status) return;
-    // Optimistic move handled by the board: the row switches section instantly
-    board.changeTaskStatus(task as Task, status);
-  }
 
   return (
     <div
@@ -74,53 +52,7 @@ export function CompletedTaskRow({
       />
 
       {/* Checkbox (checked): opens the status menu */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button
-            aria-label={t.tasks.changeStatus}
-            data-testid="status-button"
-            className={cn(
-              "flex size-6 shrink-0 items-center justify-center rounded-md text-on-strong transition-transform hover:scale-110",
-              task.status === "yes" ? "bg-success" : "bg-failure"
-            )}
-            title={t.tasks.changeStatus}
-          >
-            {task.status === "yes" ? (
-              <Check className="size-3.5" />
-            ) : (
-              <X className="size-3.5" />
-            )}
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start">
-          <DropdownMenuLabel>{t.tasks.changeStatus}</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            disabled={task.status === "yes"}
-            onClick={() => changeStatus("yes")}
-            data-testid="status-yes"
-          >
-            <Check className="size-4 text-success" />
-            {t.tasks.completedYes}
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            disabled={task.status === "no"}
-            onClick={() => changeStatus("no")}
-            data-testid="status-no"
-          >
-            <X className="size-4 text-failure" />
-            {t.tasks.completedNo}
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            onClick={() => changeStatus("pending")}
-            data-testid="status-pending"
-          >
-            <RotateCcw className="size-4" />
-            {t.tasks.markPending}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <CompletedStatusMenu task={task} />
 
       <div className="min-w-0 flex-1">
         <span className="block truncate text-sm font-medium line-through decoration-muted-foreground/40">

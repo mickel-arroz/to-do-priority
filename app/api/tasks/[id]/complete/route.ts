@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isUnauthorized, jsonError, requireUser } from "@/app/api/_lib/auth";
-import { getNextDueDate } from "@/lib/recurrence";
+import { getNextDueDateOnOrAfter } from "@/lib/recurrence";
 import { getUserToday } from "@/lib/server-today";
 import type { Task } from "@/lib/types";
 
@@ -62,10 +62,10 @@ export async function POST(
     .select("habit_id")
     .eq("task_id", task.id);
 
-  // Next instance for recurring tasks, always from the task's original due
-  // date so the recurrence keeps its cadence regardless of when it was marked.
+  // Next instance for recurring tasks: keeps the cadence but never lands in the
+  // past, so an overdue task rolls forward to today (or the next occurrence).
   let nextTask: Task | null = null;
-  const nextDue = getNextDueDate(task, task.due_date);
+  const nextDue = getNextDueDateOnOrAfter(task, task.due_date, today);
   if (nextDue) {
     const { data: created, error: nextError } = await ctx.supabase
       .from("tasks")

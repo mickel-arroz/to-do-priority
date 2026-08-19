@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { motion, useMotionValue, useTransform } from "motion/react";
 import { format } from "date-fns";
 import { enUS, es as esLocale } from "date-fns/locale";
@@ -40,6 +40,7 @@ export function TaskRow({
   const x = useMotionValue(0);
   const [leaving, setLeaving] = useState<"yes" | "no" | null>(null);
   const [dragging, setDragging] = useState(false);
+  const draggedRef = useRef(false);
   const yesOpacity = useTransform(x, [0, SWIPE_THRESHOLD], [0, 1]);
   const noOpacity = useTransform(x, [-SWIPE_THRESHOLD, 0], [1, 0]);
 
@@ -93,7 +94,13 @@ export function TaskRow({
         dragConstraints={{ left: 0, right: 0 }}
         dragElastic={0.9}
         style={{ x, touchAction: "pan-y" }}
-        onDragStart={() => setDragging(true)}
+        onPointerDownCapture={() => {
+          draggedRef.current = false;
+        }}
+        onDragStart={() => {
+          setDragging(true);
+          draggedRef.current = true;
+        }}
         onDragEnd={handleDragEnd}
         animate={
           leaving
@@ -119,7 +126,13 @@ export function TaskRow({
 
         <button
           className="min-w-0 flex-1 text-left"
-          onClick={() => onOpenDetail(task)}
+          onClick={() => {
+            if (draggedRef.current) {
+              draggedRef.current = false;
+              return;
+            }
+            onOpenDetail(task);
+          }}
           data-testid="task-title"
         >
           <span className="block truncate text-sm font-medium">{task.title}</span>

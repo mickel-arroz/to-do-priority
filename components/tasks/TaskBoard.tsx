@@ -68,12 +68,22 @@ export function TaskBoard({
     initialCompletedToday ?? []
   );
 
-  // Adopt fresh server data whenever it arrives (background router.refresh)
+  // Adopt fresh server data whenever it arrives (background router.refresh),
+  // but merge today's completions so a just-completed task never flickers out
+  // while the refetch lags or its completion window edge-excludes it.
   const [prevInitial, setPrevInitial] = useState(initialTasks);
   if (initialTasks !== prevInitial) {
     setPrevInitial(initialTasks);
     setTasks(initialTasks);
-    setCompletedToday(initialCompletedToday ?? []);
+    setCompletedToday((prev) => {
+      const server = initialCompletedToday ?? [];
+      const serverIds = new Set(server.map((t2) => t2.id));
+      const pendingIds = new Set(initialTasks.map((t2) => t2.id));
+      const stillOptimistic = prev.filter(
+        (t2) => !serverIds.has(t2.id) && !pendingIds.has(t2.id)
+      );
+      return [...server, ...stillOptimistic];
+    });
   }
 
   const completeTask = useCallback(
