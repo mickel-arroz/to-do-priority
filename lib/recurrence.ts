@@ -68,21 +68,3 @@ export function getNextDueDate(
     }
   }
 }
-
-/**
- * Como getNextDueDate pero nunca devuelve una fecha anterior a `today`
- * (yyyy-MM-dd): una tarea recurrente vencida avanza hasta la primera ocurrencia
- * >= today, conservando la cadencia. Devuelve null para tareas de una sola vez.
- */
-export function getNextDueDateOnOrAfter(
-  config: RecurrenceConfig,
-  fromDateStr: string,
-  today: string
-): string | null {
-  let next = getNextDueDate(config, fromDateStr);
-  if (next === null) return null;
-  for (let i = 0; i < 40000 && next !== null && next < today; i++) {
-    next = getNextDueDate(config, next);
-  }
-  return next;
-}
