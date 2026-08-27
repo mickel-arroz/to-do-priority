@@ -201,8 +201,20 @@ describe("buildAdvicePayload", () => {
     expect(h.completedDays).toBe(2);
     // Pendientes enteras y por prioridad; de las resueltas sólo el conteo
     expect(h.pendingTasks).toEqual([
-      { title: "Urgente", subtasks: [], dueDate: TODAY, priority: 1 },
-      { title: "Menos urgente", subtasks: [], dueDate: TODAY, priority: 4 },
+      {
+        title: "Urgente",
+        subtasks: [],
+        dueDate: TODAY,
+        priority: 1,
+        pomodoroMinutes: null,
+      },
+      {
+        title: "Menos urgente",
+        subtasks: [],
+        dueDate: TODAY,
+        priority: 4,
+        pomodoroMinutes: null,
+      },
     ]);
     expect(h.completedTasks).toBe(1);
     expect(h.failedTasks).toBe(1);
@@ -224,6 +236,22 @@ describe("buildAdvicePayload", () => {
     expect(JSON.stringify(payload.habits[0])).not.toContain("secreto");
     expect(JSON.stringify(payload.habits[0])).not.toContain("Ya cerrada");
     expect(payload.habits[0].completedTasks).toBe(1);
+  });
+});
+
+describe("pomodoro minutes", () => {
+  it("carries the configured minutes and reads 0 as no timer, not as zero cost", () => {
+    const payload = build({
+      habits: [habit({ id: "h1", habit_tasks: [{ task_id: "t2" }] })],
+      tasks: [
+        task({ id: "t1", title: "Con timer", pomodoro_minutes: 45 }),
+        task({ id: "t2", title: "Sin timer", pomodoro_minutes: 0 }),
+      ],
+    });
+    const byTitle = new Map(payload.pending.map((t) => [t.title, t.pomodoroMinutes]));
+    expect(byTitle.get("Con timer")).toBe(45);
+    expect(byTitle.get("Sin timer")).toBeNull();
+    expect(payload.habits[0].pendingTasks[0].pomodoroMinutes).toBeNull();
   });
 });
 

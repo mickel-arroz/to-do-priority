@@ -26,7 +26,17 @@ export type AdviceTaskSummary = {
   title: string;
   priority: Priority;
   dueDate: string;
+  /** Minutos de pomodoro configurados, o null si la tarea no lo usa. */
+  pomodoroMinutes: number | null;
 };
+
+/**
+ * El pomodoro es opcional: 0 significa apagado, no "cuesta cero minutos". Se
+ * traduce a null para que el modelo no lo lea como una estimación de tiempo.
+ */
+function pomodoroMinutes(task: Task): number | null {
+  return task.pomodoro_minutes > 0 ? task.pomodoro_minutes : null;
+}
 
 /** Una tarea pendiente vinculada a un hábito, con lo que hace falta para aconsejar sobre ella. */
 export type AdviceHabitTask = {
@@ -35,6 +45,8 @@ export type AdviceHabitTask = {
   subtasks: { title: string; done: boolean }[];
   dueDate: string;
   priority: Priority;
+  /** Minutos de pomodoro configurados, o null si la tarea no lo usa. */
+  pomodoroMinutes: number | null;
 };
 
 export type AdviceHabitSummary = {
@@ -133,7 +145,12 @@ export function buildAdvicePayload(input: {
     today,
     pending: sortByPriority(open)
       .slice(0, ADVICE_MAX_PENDING_TASKS)
-      .map((t) => ({ title: t.title, priority: t.priority, dueDate: t.due_date })),
+      .map((t) => ({
+        title: t.title,
+        priority: t.priority,
+        dueDate: t.due_date,
+        pomodoroMinutes: pomodoroMinutes(t),
+      })),
     overdueLastWeek: open
       .filter((t) => t.due_date < today && t.due_date >= weekAgo)
       .sort(byDueDate)
@@ -172,6 +189,7 @@ export function buildAdvicePayload(input: {
               .map((s) => ({ title: s.title, done: s.is_done })),
             dueDate: t.due_date,
             priority: t.priority,
+            pomodoroMinutes: pomodoroMinutes(t),
           })),
           completedTasks: linked.filter((t) => t.status === "yes").length,
           failedTasks: linked.filter((t) => t.status === "no").length,
