@@ -21,6 +21,47 @@ export function sortByDateAndPriority(tasks: Task[]): Task[] {
 }
 
 /**
+ * Clave de la serie de recurrencia a la que pertenece una tarea. Al completar
+ * una tarea recurrente se crea la siguiente instancia con
+ * `recurrence_parent_id` apuntando al original, así que todas las repeticiones
+ * comparten clave. Una tarea sin recurrencia es su propia serie.
+ */
+export function recurrenceSeriesKey(task: Task): string {
+  return task.recurrence_parent_id ?? task.id;
+}
+
+/** Gana la abierta; entre abiertas la que vence antes, entre cerradas la última. */
+function isBetterRepresentative(candidate: Task, incumbent: Task): boolean {
+  const candidateOpen = candidate.status === "pending";
+  const incumbentOpen = incumbent.status === "pending";
+  if (candidateOpen !== incumbentOpen) return candidateOpen;
+  return candidateOpen
+    ? candidate.due_date < incumbent.due_date
+    : candidate.due_date > incumbent.due_date;
+}
+
+/**
+ * Una sola tarea por serie de recurrencia: la que importa ahora.
+ *
+ * Las instancias de una tarea recurrente heredan el vínculo al hábito para que
+ * los días siguientes sigan contando, así que con el tiempo se acumula una fila
+ * por cada vez que la tarea se ha repetido. Para saber qué afecta al hábito
+ * sirve la ocurrencia viva —o la más reciente, si la serie ya está cerrada—,
+ * no el historial entero.
+ */
+export function dedupeRecurrenceSeries(tasks: Task[]): Task[] {
+  const bySeries = new Map<string, Task>();
+  for (const task of tasks) {
+    const key = recurrenceSeriesKey(task);
+    const incumbent = bySeries.get(key);
+    if (!incumbent || isBetterRepresentative(task, incumbent)) {
+      bySeries.set(key, task);
+    }
+  }
+  return [...bySeries.values()];
+}
+
+/**
  * Splits pending tasks into "today" (due today or overdue) and "upcoming".
  * `today` is a yyyy-MM-dd string to avoid timezone drift.
  */

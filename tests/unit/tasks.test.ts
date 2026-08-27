@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { partitionTasks, sortByDateAndPriority, sortByPriority } from "@/lib/tasks";
+import {
+  dedupeRecurrenceSeries,
+  partitionTasks,
+  sortByDateAndPriority,
+  sortByPriority,
+} from "@/lib/tasks";
 import type { Task } from "@/lib/types";
 
 let seq = 0;
@@ -72,5 +77,66 @@ describe("partitionTasks", () => {
     const { pending, upcoming } = partitionTasks([p4, p1, far, near], TODAY);
     expect(pending[0].id).toBe(p1.id);
     expect(upcoming[0].id).toBe(near.id);
+  });
+});
+
+describe("dedupeRecurrenceSeries", () => {
+  it("collapses every past occurrence of a recurring task into the open one", () => {
+    const original = task({
+      id: "orig",
+      title: "Estudiar",
+      status: "yes",
+      due_date: "2026-08-01",
+    });
+    const second = task({
+      title: "Estudiar",
+      status: "yes",
+      due_date: "2026-08-08",
+      recurrence_parent_id: "orig",
+    });
+    const live = task({
+      title: "Estudiar",
+      status: "pending",
+      due_date: "2026-08-15",
+      recurrence_parent_id: "orig",
+    });
+
+    const result = dedupeRecurrenceSeries([original, second, live]);
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe(live.id);
+  });
+
+  it("keeps the most recent occurrence when the series is already closed", () => {
+    const first = task({ id: "orig", status: "yes", due_date: "2026-08-01" });
+    const last = task({
+      status: "no",
+      due_date: "2026-08-08",
+      recurrence_parent_id: "orig",
+    });
+
+    const result = dedupeRecurrenceSeries([first, last]);
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe(last.id);
+  });
+
+  it("prefers the earliest of several open occurrences", () => {
+    const behind = task({
+      id: "orig",
+      status: "pending",
+      due_date: "2026-08-01",
+    });
+    const alsoOpen = task({
+      status: "pending",
+      due_date: "2026-08-08",
+      recurrence_parent_id: "orig",
+    });
+
+    expect(dedupeRecurrenceSeries([alsoOpen, behind])[0].id).toBe(behind.id);
+  });
+
+  it("never merges two unrelated tasks", () => {
+    const a = task({ title: "Una" });
+    const b = task({ title: "Otra" });
+    expect(dedupeRecurrenceSeries([a, b])).toHaveLength(2);
   });
 });

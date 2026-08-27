@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { HabitDetailContent } from "@/components/habits/HabitDetailContent";
 import { toBilingual } from "@/lib/advice";
 import { getUserToday } from "@/lib/server-today";
+import { dedupeRecurrenceSeries } from "@/lib/tasks";
 import { createClient } from "@/lib/supabase/server";
 import type { Habit, HabitLog, Task } from "@/lib/types";
 
@@ -44,7 +45,7 @@ export default async function HabitDetailPage({
     <HabitDetailContent
       habit={habit as Habit}
       initialLogs={(logs ?? []) as HabitLog[]}
-      linkedTasks={(linkedTasks ?? []) as Task[]}
+      linkedTasks={dedupeRecurrenceSeries((linkedTasks ?? []) as Task[])}
       allTasks={(allTasks ?? []) as Task[]}
       today={today}
       dayOfYear={dayOfYear}
