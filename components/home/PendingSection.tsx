@@ -77,6 +77,7 @@ export function PendingSection({
           <ViewToggle value={view} onChange={changeView} />
         </div>
       }
+      footerLabel={t.home.completed}
       footer={
         completedToday.length === 0 ? null : view === "cards" ? (
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
