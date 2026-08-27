@@ -23,9 +23,29 @@ npm install
    - `supabase/migrations/0002_rls.sql`
    - `supabase/migrations/0003_storage.sql`
    - `supabase/migrations/0004_list_customization.sql`
+   - `supabase/migrations/0005_advice.sql`
 4. **Authentication → URL Configuration**: Site URL `http://localhost:3000`; añade `http://localhost:3000/auth/callback` a Redirect URLs.
 5. **Google OAuth**: en [Google Cloud Console](https://console.cloud.google.com/apis/credentials) crea un OAuth 2.0 Client ID (tipo Web) con redirect URI `https://<ref>.supabase.co/auth/v1/callback`; pega client ID y secret en Supabase → **Authentication → Providers → Google** y actívalo.
 6. (Opcional, agiliza el desarrollo) **Authentication → Providers → Email**: desactiva "Confirm email".
+
+### 2.b. Consejos generados por IA
+
+Los consejos diarios usan Gemini. Consigue una clave en [Google AI Studio](https://aistudio.google.com/apikey) y añádela a `.env.local`:
+
+```
+GEMINI_API_KEY=<tu-clave>
+```
+
+⚠️ **Sin el prefijo `NEXT_PUBLIC_`**: la clave se lee sólo en el servidor y nunca debe llegar al navegador.
+
+Opcional:
+
+```
+AI_PROVIDER=gemini    # proveedor activo; por defecto gemini
+```
+
+Sin `GEMINI_API_KEY` la app funciona igual: la generación diaria falla en silencio y las
+tarjetas muestran una frase motivacional.
 
 ### 3. Arrancar
 
@@ -40,8 +60,10 @@ npm run dev
    ```
    NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co
    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<publishable-key>
+   GEMINI_API_KEY=<tu-clave>
    ```
    ⚠️ Nunca subas `SUPABASE_SERVICE_ROLE_KEY` a Vercel: solo se usa en local para los e2e.
+   ⚠️ `GEMINI_API_KEY` va **sin** `NEXT_PUBLIC_`: si lleva el prefijo, Next la inyecta en el bundle del navegador.
 3. **Supabase → Authentication → URL Configuration**:
    - Site URL: `https://<tu-app>.vercel.app` (tu dominio de producción).
    - Redirect URLs: añade (sin quitar las de localhost, para seguir desarrollando):
@@ -58,7 +80,8 @@ Notas:
 
 ## Arquitectura
 
-- **El front nunca llama a Supabase**: toda operación pasa por endpoints en `app/api/**`, que usan el cliente de servidor. **Todos los endpoints exigen un token de sesión válido** (`requireUser()` → 401 si no); solo login/register/google son públicos. La sesión viaja en cookies httpOnly (`@supabase/ssr`) y RLS actúa como segunda capa.
+- **El navegador nunca llama a Supabase**: toda operación que nace en el cliente pasa por endpoints en `app/api/**`, que usan el cliente de servidor. **Todos los endpoints exigen un token de sesión válido** (`requireUser()` → 401 si no); solo login/register/google son públicos. La sesión viaja en cookies httpOnly (`@supabase/ssr`) y RLS actúa como segunda capa.
+  - Del lado del servidor sí hay acceso directo: los Server Components leen para el render inicial, y la generación diaria de consejos además **escribe** desde el `after()` de `app/(app)/layout.tsx` (ver `docs/adr/0002`). No nace en el cliente, así que no hay endpoint que interponer; el aislamiento por usuario lo sigue dando RLS.
 - `proxy.ts` (middleware de Next 16) refresca la sesión y redirige a `/login` a los no autenticados.
 - Recurrencia y castigos de hábitos son lógica pura testeada (`lib/recurrence.ts`, `lib/habits.ts`); los castigos se derivan en lectura, nunca se almacenan.
 - Tema e idioma persisten en `localStorage` (cookie espejo para SSR sin parpadeo).

@@ -1,4 +1,5 @@
 import { HomeContent } from "@/components/home/HomeContent";
+import { toBilingual } from "@/lib/advice";
 import { computeHabitProgress } from "@/lib/habits";
 import { sortCompletedToday } from "@/lib/tasks";
 import { attachImageUrls } from "@/lib/task-images";
@@ -16,6 +17,7 @@ export default async function HomePage() {
     { data: categories },
     { data: habits },
     { data: habitLogs },
+    { data: advice },
     { data: profile },
   ] = await Promise.all([
     supabase
@@ -35,6 +37,10 @@ export default async function HomePage() {
       .order("name"),
     supabase.from("habits").select("*"),
     supabase.from("habit_logs").select("*"),
+    supabase
+      .from("user_advice")
+      .select("home_advice_es, home_advice_en")
+      .maybeSingle(),
     supabase.auth.getUser().then(async ({ data }) => {
       const { data: p } = await supabase
         .from("profiles")
@@ -72,6 +78,7 @@ export default async function HomePage() {
       completedToday={sortCompletedToday((completedTodayTasks ?? []) as Task[])}
       categories={allCategories}
       bestStreak={bestStreak}
+      advice={toBilingual(advice?.home_advice_es, advice?.home_advice_en)}
     />
   );
 }

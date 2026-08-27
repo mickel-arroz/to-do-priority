@@ -2,13 +2,14 @@
 
 import { Flame, Plus } from "@/components/icons";
 import { Button } from "@/components/ui/button";
+import { DailyAdvice } from "@/components/advice/DailyAdvice";
 import { CategoryIcon } from "@/components/categories/CategoryIcon";
 import { CompletedSection } from "@/components/home/CompletedSection";
-import { MotivationalCard } from "@/components/home/MotivationalCard";
 import { PendingSection } from "@/components/home/PendingSection";
 import { TaskSection } from "@/components/home/TaskSection";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { TaskBoard, TaskRows, useTaskBoard } from "@/components/tasks/TaskBoard";
+import type { Bilingual } from "@/lib/advice";
 import { useT } from "@/lib/i18n/locale-context";
 import {
   partitionTasks,
@@ -27,6 +28,8 @@ type HomeContentProps = {
   completedToday: Task[];
   categories: Category[];
   bestStreak: number;
+  /** Consejo de inicio del día, o null si todavía no hay ninguno generado. */
+  advice: Bilingual | null;
 };
 
 export function HomeContent(props: HomeContentProps) {
@@ -49,6 +52,7 @@ function HomeSections({
   dayOfYear,
   categories,
   bestStreak,
+  advice,
 }: HomeContentProps) {
   const t = useT();
   const board = useTaskBoard();
@@ -88,7 +92,7 @@ function HomeSections({
         }
       />
 
-      <MotivationalCard dayOfYear={dayOfYear} />
+      <DailyAdvice advice={advice} dayOfYear={dayOfYear} />
 
       <PendingSection
         pending={pending}

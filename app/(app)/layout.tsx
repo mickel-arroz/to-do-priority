@@ -1,8 +1,17 @@
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { AppShell } from "@/components/layout/AppShell";
 import type { SidebarCategory } from "@/components/layout/Sidebar";
-import { createClient } from "@/lib/supabase/server";
+import { runDailyAdviceGeneration } from "@/lib/advice-generation";
+import { getUserToday } from "@/lib/server-today";
+import { createClient, createDeferredClient } from "@/lib/supabase/server";
 import type { Category } from "@/lib/types";
+
+/**
+ * La generación diaria de consejos corre en `after()`, dentro del presupuesto
+ * de esta ruta, así que la duración máxima se declara explícitamente.
+ */
+export const maxDuration = 60;
 
 export default async function AppLayout({
   children,
@@ -15,6 +24,16 @@ export default async function AppLayout({
   } = await supabase.auth.getUser();
 
   if (!user) redirect("/login");
+
+  // El día y el cliente diferido se resuelven aquí, durante el render: un
+  // Server Component no puede tocar cookies ni cabeceras dentro de `after()`.
+  const [{ today }, deferred] = await Promise.all([
+    getUserToday(),
+    createDeferredClient(),
+  ]);
+  // Único punto por el que pasa toda página autenticada. `after()` corre
+  // después de enviar la respuesta, así que no entra en el camino del render.
+  after(() => runDailyAdviceGeneration(deferred, today));
 
   const [{ data: profile }, { data: categories }] = await Promise.all([
     supabase

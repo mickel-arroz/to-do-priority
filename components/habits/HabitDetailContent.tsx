@@ -17,11 +17,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { LoadingButton } from "@/components/ui/loading-button";
 import { Card, CardContent } from "@/components/ui/card";
+import { DailyAdvice } from "@/components/advice/DailyAdvice";
 import { HabitCalendar } from "@/components/habits/HabitCalendar";
 import { HabitCharts } from "@/components/habits/HabitCharts";
 import { HabitFormDialog } from "@/components/habits/HabitFormDialog";
 import { HabitProgressBar } from "@/components/habits/HabitProgressBar";
 import { StreakBadge } from "@/components/habits/StreakBadge";
+import type { Bilingual } from "@/lib/advice";
 import { api } from "@/lib/api/client";
 import { computeHabitProgress } from "@/lib/habits";
 import { useT } from "@/lib/i18n/locale-context";
@@ -36,6 +38,9 @@ type HabitDetailContentProps = {
   /** All pending tasks, for the edit dialog */
   allTasks: Task[];
   today: string;
+  dayOfYear: number;
+  /** Consejo de este hábito, o null si todavía no hay ninguno generado. */
+  advice: Bilingual | null;
 };
 
 export function HabitDetailContent({
@@ -44,6 +49,8 @@ export function HabitDetailContent({
   linkedTasks,
   allTasks,
   today,
+  dayOfYear,
+  advice,
 }: HabitDetailContentProps) {
   const t = useT();
   const router = useRouter();
@@ -166,6 +173,8 @@ export function HabitDetailContent({
           </Card>
         ))}
       </div>
+
+      <DailyAdvice advice={advice} dayOfYear={dayOfYear} habitId={habit.id} />
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,380px)_1fr]">
         <Card>
