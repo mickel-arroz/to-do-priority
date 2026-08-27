@@ -8,7 +8,7 @@ import type { AdvicePayload } from "@/lib/advice";
  * `lib/limits.ts`, que está reservado a lo que sí se valida con Zod y se
  * muestra en formularios.
  */
-export const ADVICE_MAX_CHARS = 200;
+export const ADVICE_MAX_CHARS = 300;
 
 const bilingualText = {
   es: { type: Type.STRING },
@@ -59,7 +59,9 @@ export function buildAdvicePrompt(payload: AdvicePayload): string {
         currentStreak: h.currentStreak,
         bestStreak: h.bestStreak,
         completionRatePercent: h.completionRate,
-        linkedTasks: h.linkedTasks,
+        pendingTasks: h.pendingTasks,
+        tasksDoneWell: h.completedTasks,
+        tasksFailed: h.failedTasks,
       })
     )
     .join("\n");
@@ -77,19 +79,34 @@ export function buildAdvicePrompt(payload: AdvicePayload): string {
 
 You are writing today's advice for ONE user, from their real data below. Return a single JSON object following the response schema exactly.
 
+WHAT MAKES ADVICE GOOD HERE — read this before writing anything:
+Listing the user's own data back at them is NOT advice. They can already see their tasks, their counts and their streaks on screen. Your job is to tell them something they cannot see: what the numbers MEAN together, what the likely cause is, and what precise move to make next.
+- BAD: "You failed 42 tasks this week. Prioritise your three overdue priority-1 tasks: A, B and C." (pure readback)
+- GOOD: names the pattern, explains what it implies, then gives ONE concrete, doable next move — the smallest action that changes the situation today, and why that one.
+Always end on a single, specific action. Never a menu of options. Never a generic productivity maxim.
+
 WRITE:
-1. "home": ONE piece of advice about the user's overall situation — what is pending, what slipped in the last 7 days, and what is coming in the next 7. Weigh PRIORITY, not just volume: point at what deserves attention first. If they failed tasks this week, let the tone match how the week actually went, without scolding.
-2. "habits": ONE piece of advice per habit listed below, each carrying the exact "habitId" it belongs to. Talk about THAT habit: its progress, its streaks, its completion rate and its linked tasks. NEVER invent a habitId that is not in the input; NEVER repeat a habitId.
-   - A "finite" habit has a "target": say how far they are from it and whether their pace is on track.
-   - An "open-ended" habit has NO target: never mention a goal, a deadline or a percentage of completion for it.
-   - A live "currentStreak" deserves recognition and a nudge not to break it. A streak that just broke deserves a way back in, never a punishment.
+1. "home": advice about the user's overall situation. Read the shape of the week: is the load too big, badly distributed, or concentrated in one priority or one deadline? A high failure count usually means over-commitment, not laziness — say so plainly and help them cut, sequence or reschedule. Weigh PRIORITY over volume. Pick at most ONE or TWO tasks by name, as the thread to pull, not as a list to recite.
+2. "habits": one piece of advice per habit listed below, each carrying the exact "habitId" it belongs to. NEVER invent a habitId that is not in the input; NEVER repeat a habitId. Build each one from that habit's OWN material:
+   - Its "name" and "description" say what the user is actually trying to become. Anchor the advice in that intent, not in generic habit theory.
+   - "pendingTasks" is what is still open for this habit, each with its own description, due date and priority. Use the descriptions: they say what the work really involves. Point at the specific next step inside the most important one — not merely "complete this task".
+   - "tasksDoneWell" and "tasksFailed" are counts of already-resolved tasks for this habit. Use them ONLY to judge how the user has been coping; never list or invent resolved tasks.
+   - A "finite" habit has a "target": relate progress to it and say whether the pace holds. An "open-ended" habit has NO target: never mention a goal, deadline or completion percentage for it.
+   - A live "currentStreak" deserves recognition and a reason not to break it. A streak that just broke deserves a concrete way back in today, never a reproach.
+   - A habit at 0 progress with days already elapsed is a starting problem, not a discipline problem: give the smallest possible first step.
 
 STYLE — every piece of advice:
-- ONE single paragraph of AT MOST ${ADVICE_MAX_CHARS} characters. It must be readable at a glance.
-- Speak TO the user, in second person. Be concrete: refer to their actual tasks, numbers and streaks, never generic productivity platitudes.
+- ONE single paragraph of AT MOST ${ADVICE_MAX_CHARS} characters, warm and direct. It must be readable at a glance.
+- Speak TO the user, in second person. Be concrete: their actual tasks, numbers and streaks — never generic productivity platitudes.
 - Base every statement ONLY on the data below. Do not invent tasks, habits, numbers or dates that are not there.
 - PLAIN TEXT ONLY: no markdown, no asterisks, no bullets, no links, no emoji.
 - BILINGUAL: write every text in BOTH Spanish ("es") and English ("en"). Natural prose in each language, not a word-by-word translation.
+
+VOCABULARY — this product has a fixed glossary. Breaking it reads as a bug:
+- In Spanish call it "hábito", ALWAYS. NEVER "meta", "objetivo", "reto" or "desafío", not even as a synonym to avoid repetition.
+- In English call it "habit", ALWAYS. NEVER "goal", "challenge" or "target" for the habit itself. You may say "target" only for the numeric "target" field of a finite habit.
+- A task the user let expire is "tarea vencida" / "overdue task". One they explicitly closed as not done is "tarea fallada" / "failed task". These are different things: do not mix them.
+- Say "racha" / "streak" for consecutive days.
 
 USER OVERVIEW:
 ${overview}

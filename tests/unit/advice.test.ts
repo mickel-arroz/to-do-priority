@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   ADVICE_MAX_PENDING_TASKS,
   HABIT_DESCRIPTION_LIMIT,
+  TASK_DESCRIPTION_LIMIT,
   adviceWindowStart,
   buildAdvicePayload,
   isAdvicePayloadEmpty,
@@ -112,11 +113,21 @@ describe("buildAdvicePayload", () => {
     expect(payload.pending[0].title).toBe("T45");
   });
 
-  it("never sends task descriptions", () => {
+  it("never sends descriptions of the home pending tasks", () => {
     const payload = build({
       tasks: [task({ id: "1", description: "un secreto muy largo" })],
     });
-    expect(JSON.stringify(payload)).not.toContain("secreto");
+    expect(JSON.stringify(payload.pending)).not.toContain("secreto");
+  });
+
+  it("truncates the description of a pending task linked to a habit", () => {
+    const payload = build({
+      habits: [habit({ id: "h1", habit_tasks: [{ task_id: "t1" }] })],
+      tasks: [task({ id: "t1", description: "x".repeat(TASK_DESCRIPTION_LIMIT + 50) })],
+    });
+    expect(payload.habits[0].pendingTasks[0].description).toHaveLength(
+      TASK_DESCRIPTION_LIMIT
+    );
   });
 
   it("truncates habit descriptions", () => {
@@ -140,26 +151,33 @@ describe("buildAdvicePayload", () => {
     expect(payload.habits.map((h) => h.id)).toEqual(["live"]);
   });
 
-  it("carries habit metrics and linked task titles with their status", () => {
+  it("carries habit metrics and only the pending linked tasks in full", () => {
     const payload = build({
       habits: [
         habit({
           id: "h1",
           target_days: null,
           end_date: null,
-          habit_tasks: [{ task_id: "t1" }, { task_id: "t2" }],
+          habit_tasks: [
+            { task_id: "t1" },
+            { task_id: "t2" },
+            { task_id: "t3" },
+            { task_id: "t4" },
+          ],
         }),
       ],
       logs: [log("h1", "2026-08-12"), log("h1", "2026-08-13")],
       tasks: [
-        task({ id: "t1", title: "Vinculada" }),
+        task({ id: "t1", title: "Menos urgente", priority: 4 as Priority }),
         task({
           id: "t2",
-          title: "Fallada",
-          status: "no",
-          completed_at: "2026-08-13T00:00:00Z",
+          title: "Urgente",
+          priority: 1 as Priority,
+          description: "lo que toca de verdad",
         }),
-        task({ id: "t3", title: "Suelta" }),
+        task({ id: "t3", title: "Hecha", status: "yes", completed_at: "2026-01-01T00:00:00Z" }),
+        task({ id: "t4", title: "Fallada", status: "no", completed_at: "2026-01-02T00:00:00Z" }),
+        task({ id: "suelta", title: "Suelta" }),
       ],
     });
     const h = payload.habits[0];
@@ -167,10 +185,36 @@ describe("buildAdvicePayload", () => {
     expect(h.target).toBeNull();
     expect(h.currentStreak).toBe(2);
     expect(h.completedDays).toBe(2);
-    expect(h.linkedTasks).toEqual([
-      { title: "Vinculada", status: "pending" },
-      { title: "Fallada", status: "no" },
+    // Pendientes enteras y por prioridad; de las resueltas sólo el conteo
+    expect(h.pendingTasks).toEqual([
+      {
+        title: "Urgente",
+        description: "lo que toca de verdad",
+        dueDate: TODAY,
+        priority: 1,
+      },
+      { title: "Menos urgente", description: null, dueDate: TODAY, priority: 4 },
     ]);
+    expect(h.completedTasks).toBe(1);
+    expect(h.failedTasks).toBe(1);
+  });
+
+  it("never sends the data of a resolved task linked to a habit", () => {
+    const payload = build({
+      habits: [habit({ id: "h1", habit_tasks: [{ task_id: "t1" }] })],
+      tasks: [
+        task({
+          id: "t1",
+          title: "Ya cerrada",
+          description: "un secreto",
+          status: "yes",
+          completed_at: "2026-01-01T00:00:00Z",
+        }),
+      ],
+    });
+    expect(JSON.stringify(payload.habits[0])).not.toContain("secreto");
+    expect(JSON.stringify(payload.habits[0])).not.toContain("Ya cerrada");
+    expect(payload.habits[0].completedTasks).toBe(1);
   });
 });
 

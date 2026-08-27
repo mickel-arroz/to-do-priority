@@ -163,6 +163,8 @@ export function HabitDetailContent({
         <HabitProgressBar progress={progress} />
       </header>
 
+      <DailyAdvice advice={advice} dayOfYear={dayOfYear} habitId={habit.id} />
+
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
         {metrics.map((m) => (
           <Card key={m.label} className="gradient-card py-0">
@@ -173,8 +175,6 @@ export function HabitDetailContent({
           </Card>
         ))}
       </div>
-
-      <DailyAdvice advice={advice} dayOfYear={dayOfYear} habitId={habit.id} />
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,380px)_1fr]">
         <Card>

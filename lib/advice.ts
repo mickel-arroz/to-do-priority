@@ -17,8 +17,13 @@ export type Bilingual = { es: string; en: string };
 
 /** Tope de tareas pendientes que viajan al prompt: acota el coste por usuario. */
 export const ADVICE_MAX_PENDING_TASKS = 40;
-/** Las descripciones de hábito se truncan; las de tarea no se envían nunca. */
 export const HABIT_DESCRIPTION_LIMIT = 500;
+/**
+ * Las descripciones de tarea sólo viajan para las **pendientes vinculadas a un
+ * hábito**: son la materia con la que se aconseja sobre ese hábito. Las de la
+ * vista de inicio no se envían nunca, y de las ya resueltas sólo van conteos.
+ */
+export const TASK_DESCRIPTION_LIMIT = 500;
 /** Ventana, en días, hacia atrás (vencidas, completadas) y hacia delante (próximas). */
 export const ADVICE_WINDOW_DAYS = 7;
 
@@ -26,6 +31,14 @@ export type AdviceTaskSummary = {
   title: string;
   priority: Priority;
   dueDate: string;
+};
+
+/** Una tarea pendiente vinculada a un hábito, con lo que hace falta para aconsejar sobre ella. */
+export type AdviceHabitTask = {
+  title: string;
+  description: string | null;
+  dueDate: string;
+  priority: Priority;
 };
 
 export type AdviceHabitSummary = {
@@ -40,7 +53,11 @@ export type AdviceHabitSummary = {
   currentStreak: number;
   bestStreak: number;
   completionRate: number;
-  linkedTasks: { title: string; status: TaskStatus }[];
+  /** Lo que queda por hacer: va entero, por prioridad. */
+  pendingTasks: AdviceHabitTask[];
+  /** De lo ya resuelto sólo interesa cuánto salió bien y cuánto se falló. */
+  completedTasks: number;
+  failedTasks: number;
 };
 
 export type AdvicePayload = {
@@ -135,6 +152,9 @@ export function buildAdvicePayload(input: {
       .filter((h) => !isFinishedHabit(h, logsByHabit.get(h.id) ?? [], today))
       .map((h) => {
         const progress = computeHabitProgress(h, logsByHabit.get(h.id) ?? [], today);
+        const linked = linkedTaskIds([h])
+          .map((id) => tasksById.get(id))
+          .filter((t): t is Task => t !== undefined);
         return {
           id: h.id,
           name: h.name,
@@ -147,10 +167,16 @@ export function buildAdvicePayload(input: {
           currentStreak: progress.currentStreak,
           bestStreak: progress.bestStreak,
           completionRate: progress.completionRate,
-          linkedTasks: linkedTaskIds([h])
-            .map((id) => tasksById.get(id))
-            .filter((t): t is Task => t !== undefined)
-            .map((t) => ({ title: t.title, status: t.status })),
+          pendingTasks: sortByPriority(
+            linked.filter((t) => t.status === "pending")
+          ).map((t) => ({
+            title: t.title,
+            description: t.description?.slice(0, TASK_DESCRIPTION_LIMIT) ?? null,
+            dueDate: t.due_date,
+            priority: t.priority,
+          })),
+          completedTasks: linked.filter((t) => t.status === "yes").length,
+          failedTasks: linked.filter((t) => t.status === "no").length,
         };
       }),
   };
