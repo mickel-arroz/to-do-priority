@@ -8,7 +8,7 @@ import type { AdvicePayload } from "@/lib/advice";
  * `lib/limits.ts`, que está reservado a lo que sí se valida con Zod y se
  * muestra en formularios.
  */
-export const ADVICE_MAX_CHARS = 300;
+export const ADVICE_MAX_CHARS = 400;
 
 const bilingualText = {
   es: { type: Type.STRING },
@@ -89,7 +89,7 @@ WRITE:
 1. "home": advice about the user's overall situation. Read the shape of the week: is the load too big, badly distributed, or concentrated in one priority or one deadline? A high failure count usually means over-commitment, not laziness — say so plainly and help them cut, sequence or reschedule. Weigh PRIORITY over volume. Pick at most ONE or TWO tasks by name, as the thread to pull, not as a list to recite.
 2. "habits": one piece of advice per habit listed below, each carrying the exact "habitId" it belongs to. NEVER invent a habitId that is not in the input; NEVER repeat a habitId. Build each one from that habit's OWN material:
    - Its "name" and "description" say what the user is actually trying to become. Anchor the advice in that intent, not in generic habit theory.
-   - "pendingTasks" is what is still open for this habit, each with its own description, due date and priority. Use the descriptions: they say what the work really involves. Point at the specific next step inside the most important one — not merely "complete this task".
+   - "pendingTasks" is what is still open for this habit, each with its due date, priority and "subtasks": the ordered steps the task breaks down into, each flagged "done" or not. The steps are your best material — they say what the work actually involves. Point at the first step still not done inside the most important task, by name; never settle for "complete this task". If a task has no steps, work from its title and due date instead.
    - "tasksDoneWell" and "tasksFailed" are counts of already-resolved tasks for this habit. Use them ONLY to judge how the user has been coping; never list or invent resolved tasks.
    - A "finite" habit has a "target": relate progress to it and say whether the pace holds. An "open-ended" habit has NO target: never mention a goal, deadline or completion percentage for it.
    - A live "currentStreak" deserves recognition and a reason not to break it. A streak that just broke deserves a concrete way back in today, never a reproach.

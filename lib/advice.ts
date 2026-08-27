@@ -17,13 +17,8 @@ export type Bilingual = { es: string; en: string };
 
 /** Tope de tareas pendientes que viajan al prompt: acota el coste por usuario. */
 export const ADVICE_MAX_PENDING_TASKS = 40;
+/** Las descripciones de tarea no se envían nunca; las de hábito, truncadas. */
 export const HABIT_DESCRIPTION_LIMIT = 500;
-/**
- * Las descripciones de tarea sólo viajan para las **pendientes vinculadas a un
- * hábito**: son la materia con la que se aconseja sobre ese hábito. Las de la
- * vista de inicio no se envían nunca, y de las ya resueltas sólo van conteos.
- */
-export const TASK_DESCRIPTION_LIMIT = 500;
 /** Ventana, en días, hacia atrás (vencidas, completadas) y hacia delante (próximas). */
 export const ADVICE_WINDOW_DAYS = 7;
 
@@ -36,7 +31,8 @@ export type AdviceTaskSummary = {
 /** Una tarea pendiente vinculada a un hábito, con lo que hace falta para aconsejar sobre ella. */
 export type AdviceHabitTask = {
   title: string;
-  description: string | null;
+  /** Los pasos de la tarea, en orden: dicen en qué consiste el trabajo. */
+  subtasks: { title: string; done: boolean }[];
   dueDate: string;
   priority: Priority;
 };
@@ -171,7 +167,9 @@ export function buildAdvicePayload(input: {
             linked.filter((t) => t.status === "pending")
           ).map((t) => ({
             title: t.title,
-            description: t.description?.slice(0, TASK_DESCRIPTION_LIMIT) ?? null,
+            subtasks: [...(t.subtasks ?? [])]
+              .sort((a, b) => a.position - b.position)
+              .map((s) => ({ title: s.title, done: s.is_done })),
             dueDate: t.due_date,
             priority: t.priority,
           })),

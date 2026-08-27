@@ -60,9 +60,10 @@ export async function runDailyAdviceGeneration(
     ];
     if (linked.length > 0) filters.push(`id.in.(${linked.join(",")})`);
 
+    // Con sus subtareas: son los pasos con los que se aconseja sobre un hábito.
     const { data: tasks } = await supabase
       .from("tasks")
-      .select("*")
+      .select("*, subtasks(*)")
       .or(filters.join(","));
 
     const payload = buildAdvicePayload({

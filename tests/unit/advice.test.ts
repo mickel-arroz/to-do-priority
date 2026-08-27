@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   ADVICE_MAX_PENDING_TASKS,
   HABIT_DESCRIPTION_LIMIT,
-  TASK_DESCRIPTION_LIMIT,
   adviceWindowStart,
   buildAdvicePayload,
   isAdvicePayloadEmpty,
@@ -13,7 +12,7 @@ import {
   toBilingual,
   wasAdviceAttemptedToday,
 } from "@/lib/advice";
-import type { Habit, HabitLog, Priority, Task, TaskStatus } from "@/lib/types";
+import type { Habit, HabitLog, Priority, Subtask, Task, TaskStatus } from "@/lib/types";
 
 const TODAY = "2026-08-14";
 
@@ -51,6 +50,10 @@ function habit(partial: Partial<Habit> & { id: string }): Habit {
     created_at: "",
     ...partial,
   };
+}
+
+function subtask(title: string, position: number, isDone = false): Subtask {
+  return { id: title, task_id: "t1", title, is_done: isDone, position };
 }
 
 function log(habitId: string, date: string): HabitLog {
@@ -120,14 +123,25 @@ describe("buildAdvicePayload", () => {
     expect(JSON.stringify(payload.pending)).not.toContain("secreto");
   });
 
-  it("truncates the description of a pending task linked to a habit", () => {
+  it("sends the steps of a pending task linked to a habit, in order, but never its description", () => {
     const payload = build({
       habits: [habit({ id: "h1", habit_tasks: [{ task_id: "t1" }] })],
-      tasks: [task({ id: "t1", description: "x".repeat(TASK_DESCRIPTION_LIMIT + 50) })],
+      tasks: [
+        task({
+          id: "t1",
+          description: "un secreto",
+          subtasks: [
+            subtask("Segundo", 1),
+            subtask("Primero", 0, true),
+          ],
+        }),
+      ],
     });
-    expect(payload.habits[0].pendingTasks[0].description).toHaveLength(
-      TASK_DESCRIPTION_LIMIT
-    );
+    expect(payload.habits[0].pendingTasks[0].subtasks).toEqual([
+      { title: "Primero", done: true },
+      { title: "Segundo", done: false },
+    ]);
+    expect(JSON.stringify(payload)).not.toContain("secreto");
   });
 
   it("truncates habit descriptions", () => {
@@ -187,13 +201,8 @@ describe("buildAdvicePayload", () => {
     expect(h.completedDays).toBe(2);
     // Pendientes enteras y por prioridad; de las resueltas sólo el conteo
     expect(h.pendingTasks).toEqual([
-      {
-        title: "Urgente",
-        description: "lo que toca de verdad",
-        dueDate: TODAY,
-        priority: 1,
-      },
-      { title: "Menos urgente", description: null, dueDate: TODAY, priority: 4 },
+      { title: "Urgente", subtasks: [], dueDate: TODAY, priority: 1 },
+      { title: "Menos urgente", subtasks: [], dueDate: TODAY, priority: 4 },
     ]);
     expect(h.completedTasks).toBe(1);
     expect(h.failedTasks).toBe(1);
