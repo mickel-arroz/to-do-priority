@@ -29,13 +29,19 @@ export async function runDailyAdviceGeneration(
     // Esto corre en cada navegación autenticada, así que lo primero es la
     // pregunta más barata: una lectura por clave primaria. Casi siempre corta
     // aquí y no se toca ninguna otra tabla.
-    const { data: state } = await supabase
+    const { data: state, error: stateError } = await supabase
       .from("user_advice")
       .select("last_attempt_date")
       .maybeSingle();
 
-    const lastAttemptDate =
-      (state as { last_attempt_date: string | null } | null)?.last_attempt_date ?? null;
+    // Sin poder leer el estado no hay idempotencia posible, así que no se
+    // sigue. El caso típico es que falte la migración 0005.
+    if (stateError) {
+      console.error("[advice] no se pudo leer user_advice", stateError.message);
+      return;
+    }
+
+    const lastAttemptDate = state?.last_attempt_date ?? null;
 
     if (wasAdviceAttemptedToday(lastAttemptDate, today)) return;
 
@@ -74,7 +80,12 @@ export async function runDailyAdviceGeneration(
       "claim_advice_day",
       { p_day: today }
     );
-    if (claimError || claimed !== true) return;
+    if (claimError) {
+      console.error("[advice] no se pudo reclamar el día", claimError.message);
+      return;
+    }
+    // Otra pestaña se llevó el día: es lo normal, no es un fallo.
+    if (claimed !== true) return;
 
     const provider = await createAdviceProvider();
     const { text, model } = await provider.generate({
@@ -87,7 +98,7 @@ export async function runDailyAdviceGeneration(
       payload.habits.map((h) => h.id)
     );
 
-    await supabase.rpc("save_daily_advice", {
+    const { error: saveError } = await supabase.rpc("save_daily_advice", {
       p_day: today,
       p_model: model,
       p_home_es: parsed.home.es,
@@ -98,6 +109,15 @@ export async function runDailyAdviceGeneration(
         en: advice.en,
       })),
     });
+    if (saveError) {
+      console.error("[advice] no se pudo guardar el consejo", saveError.message);
+      return;
+    }
+
+    // Una vez al día por usuario: no ensucia el log y confirma que funcionó.
+    console.log(
+      `[advice] generado con ${model}: inicio + ${Object.keys(parsed.habits).length} hábito(s)`
+    );
   } catch (error) {
     // El día ya quedó reclamado, así que esto no se reintenta hoy
     console.error("[advice] generación diaria fallida", error);
