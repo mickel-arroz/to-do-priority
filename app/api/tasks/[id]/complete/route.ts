@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isUnauthorized, jsonError, requireUser } from "@/app/api/_lib/auth";
+import { syncHabitDaysForTask } from "@/app/api/_lib/habit-day";
 import { getNextDueDate } from "@/lib/recurrence";
 import { getUserToday } from "@/lib/server-today";
 import type { Task } from "@/lib/types";
@@ -12,7 +13,7 @@ const completeSchema = z.object({ status: z.enum(["yes", "no"]) });
  * 1. marks it yes/no
  * 2. writes the permanent completion log
  * 3. if recurring, creates the next instance (subtasks reset)
- * 4. upserts today's 'completed' habit log for every habit linked to it
+ * 4. recomputes today's habit day for every habit linked to it
  */
 export async function POST(
   request: Request,
@@ -115,30 +116,11 @@ export async function POST(
     }
   }
 
-  // A habit day is completed only when ALL its linked tasks due by today
-  // are done, and this completion was satisfactory
-  if (parsed.data.status === "yes" && habitLinks && habitLinks.length > 0) {
-    for (const { habit_id } of habitLinks) {
-      const { data: stillPending } = await ctx.supabase
-        .from("habit_tasks")
-        .select("task_id, tasks!inner(id, status, due_date)")
-        .eq("habit_id", habit_id)
-        .eq("tasks.status", "pending")
-        .lte("tasks.due_date", today)
-        .limit(1);
-
-      if (!stillPending || stillPending.length === 0) {
-        await ctx.supabase.from("habit_logs").upsert(
-          {
-            habit_id,
-            user_id: ctx.user.id,
-            log_date: today,
-            status: "completed" as const,
-          },
-          { onConflict: "habit_id,log_date" }
-        );
-      }
-    }
+  // El día objetivo sólo baja cuando TODAS las tareas del hábito de ese día
+  // quedaron cerradas con éxito. Se recalcula también al marcar 'no' para que
+  // una tarea fallada deshaga un día que ya se hubiera acreditado.
+  if (habitLinks && habitLinks.length > 0) {
+    await syncHabitDaysForTask(ctx, task.id, today);
   }
 
   return NextResponse.json({ task: updated, nextTask });

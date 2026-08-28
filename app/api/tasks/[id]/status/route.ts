@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { format } from "date-fns";
 import { isUnauthorized, jsonError, requireUser } from "@/app/api/_lib/auth";
-import type { AuthContext } from "@/app/api/_lib/auth";
+import { syncHabitDaysForTask } from "@/app/api/_lib/habit-day";
+import { getUserToday } from "@/lib/server-today";
 import type { Task } from "@/lib/types";
 
 const statusSchema = z.object({ status: z.enum(["pending", "yes", "no"]) });
@@ -34,7 +34,7 @@ export async function POST(
   if (task.status === "pending") return jsonError("not_completed", 409);
   if (task.status === target) return NextResponse.json({ task });
 
-  const today = format(new Date(), "yyyy-MM-dd");
+  const { today } = await getUserToday();
 
   // Latest completion log row for this task
   const { data: lastCompletion } = await ctx.supabase
@@ -69,7 +69,7 @@ export async function POST(
       .select()
       .single();
     if (error) return jsonError(error.message, 500);
-    await syncHabitLogsForTask(ctx, id, today);
+    await syncHabitDaysForTask(ctx, id, today);
     return NextResponse.json({ task: updated });
   }
 
@@ -88,59 +88,8 @@ export async function POST(
       .update({ status: target })
       .eq("id", lastCompletion.id);
   }
-  await syncHabitLogsForTask(ctx, id, today);
+  // Pasar una tarea a 'no' revierte el día: deja de contar como día objetivo,
+  // sin restar ninguno de los ya ganados.
+  await syncHabitDaysForTask(ctx, id, today);
   return NextResponse.json({ task: updated });
-}
-
-/**
- * Recomputes today's habit log for every habit linked to the task: the day
- * is completed iff no linked task due by today is pending and at least one
- * was completed with 'yes' today.
- */
-async function syncHabitLogsForTask(
-  ctx: AuthContext,
-  taskId: string,
-  today: string
-) {
-  const { data: habitLinks } = await ctx.supabase
-    .from("habit_tasks")
-    .select("habit_id")
-    .eq("task_id", taskId);
-  if (!habitLinks || habitLinks.length === 0) return;
-
-  for (const { habit_id } of habitLinks) {
-    const { data: linked } = await ctx.supabase
-      .from("habit_tasks")
-      .select("tasks!inner(id, status, due_date, completed_at)")
-      .eq("habit_id", habit_id);
-
-    const tasks = (linked ?? []).map(
-      (l) => l.tasks as unknown as Pick<Task, "id" | "status" | "due_date" | "completed_at">
-    );
-    const anyPendingDue = tasks.some(
-      (t) => t.status === "pending" && t.due_date <= today
-    );
-    const anyYesToday = tasks.some(
-      (t) => t.status === "yes" && t.completed_at?.startsWith(today)
-    );
-
-    if (!anyPendingDue && anyYesToday) {
-      await ctx.supabase.from("habit_logs").upsert(
-        {
-          habit_id,
-          user_id: ctx.user.id,
-          log_date: today,
-          status: "completed" as const,
-        },
-        { onConflict: "habit_id,log_date" }
-      );
-    } else {
-      await ctx.supabase
-        .from("habit_logs")
-        .delete()
-        .eq("habit_id", habit_id)
-        .eq("log_date", today)
-        .eq("status", "completed");
-    }
-  }
 }

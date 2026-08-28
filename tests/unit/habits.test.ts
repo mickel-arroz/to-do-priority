@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { buildCalendarData, computeHabitProgress, isIndefinite } from "@/lib/habits";
+import {
+  buildCalendarData,
+  computeHabitProgress,
+  isHabitDayCompleted,
+  isIndefinite,
+} from "@/lib/habits";
 import type { Habit, HabitLog } from "@/lib/types";
 
 function habit(partial: Partial<Habit>): Habit {
@@ -146,5 +151,57 @@ describe("buildCalendarData", () => {
     expect(byDate["2026-08-12"]).toBe("completed");
     expect(byDate["2026-08-14"]).toBe("today-pending");
     expect(byDate["2026-08-20"]).toBe("future");
+  });
+});
+
+describe("isHabitDayCompleted", () => {
+  const DAY = "2026-08-14";
+  function t(
+    status: "pending" | "yes" | "no",
+    due_date = DAY,
+    completed_at: string | null = null
+  ) {
+    return { status, due_date, completed_at };
+  }
+
+  it("cuenta el día cuando todas las tareas del día son exitosas", () => {
+    expect(isHabitDayCompleted([t("yes"), t("yes")], DAY)).toBe(true);
+  });
+
+  it("no cuenta el día si alguna tarea del día quedó fallada", () => {
+    expect(isHabitDayCompleted([t("yes"), t("no")], DAY)).toBe(false);
+  });
+
+  it("no cuenta el día mientras quede una tarea del día pendiente", () => {
+    expect(isHabitDayCompleted([t("yes"), t("pending")], DAY)).toBe(false);
+  });
+
+  it("no cuenta el día si arrastra una tarea vencida sin cerrar", () => {
+    expect(isHabitDayCompleted([t("yes"), t("pending", "2026-08-12")], DAY)).toBe(
+      false
+    );
+  });
+
+  it("cuenta la tarea vencida que se cerró con éxito ese día", () => {
+    expect(
+      isHabitDayCompleted([t("yes", "2026-08-12", `${DAY}T10:00:00Z`)], DAY)
+    ).toBe(true);
+  });
+
+  it("no cuenta la tarea vencida que se cerró como fallada ese día", () => {
+    expect(
+      isHabitDayCompleted([t("no", "2026-08-12", `${DAY}T10:00:00Z`)], DAY)
+    ).toBe(false);
+  });
+
+  it("ignora las instancias futuras que crea la recurrencia", () => {
+    expect(
+      isHabitDayCompleted([t("yes"), t("pending", "2026-08-15")], DAY)
+    ).toBe(true);
+  });
+
+  it("no acredita un día sin ninguna tarea que resolver", () => {
+    expect(isHabitDayCompleted([t("yes", "2026-08-12")], DAY)).toBe(false);
+    expect(isHabitDayCompleted([], DAY)).toBe(false);
   });
 });
