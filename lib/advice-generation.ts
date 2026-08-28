@@ -9,7 +9,8 @@ import {
 } from "@/lib/advice";
 import { adviceSchema, buildAdvicePrompt } from "@/lib/ai/advice-prompt";
 import { createAdviceProvider } from "@/lib/ai/provider";
-import type { Habit, HabitLog, Task } from "@/lib/types";
+import { toBlockInputs } from "@/lib/availability";
+import type { BusyBlock, Habit, HabitLog, Task } from "@/lib/types";
 
 /**
  * Generación diaria: una única petición a la IA por usuario y por día, de la
@@ -45,10 +46,14 @@ export async function runDailyAdviceGeneration(
 
     if (wasAdviceAttemptedToday(lastAttemptDate, today)) return;
 
-    const [{ data: habits }, { data: logs }] = await Promise.all([
-      supabase.from("habits").select("*, habit_tasks(task_id)"),
-      supabase.from("habit_logs").select("*"),
-    ]);
+    const [{ data: habits }, { data: logs }, { data: busyBlocks }] =
+      await Promise.all([
+        supabase.from("habits").select("*, habit_tasks(task_id)"),
+        supabase.from("habit_logs").select("*"),
+        // Sin disponibilidad configurada esto viene vacío y la carga cae al
+        // caso por defecto, así que un fallo aquí no impide aconsejar.
+        supabase.from("busy_blocks").select("*"),
+      ]);
 
     // Sólo las tareas que la carga mira: las pendientes, las resueltas dentro
     // de la ventana y las vinculadas a un hábito, sin importar cuándo se
@@ -70,6 +75,7 @@ export async function runDailyAdviceGeneration(
       tasks: (tasks ?? []) as Task[],
       habits: (habits ?? []) as Habit[],
       logs: (logs ?? []) as HabitLog[],
+      busyBlocks: toBlockInputs((busyBlocks ?? []) as BusyBlock[]),
       today,
     });
 

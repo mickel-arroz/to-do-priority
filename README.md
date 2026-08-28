@@ -24,6 +24,7 @@ npm install
    - `supabase/migrations/0003_storage.sql`
    - `supabase/migrations/0004_list_customization.sql`
    - `supabase/migrations/0005_advice.sql`
+   - `supabase/migrations/0006_availability.sql`
 4. **Authentication → URL Configuration**: Site URL `http://localhost:3000`; añade `http://localhost:3000/auth/callback` a Redirect URLs.
 5. **Google OAuth**: en [Google Cloud Console](https://console.cloud.google.com/apis/credentials) crea un OAuth 2.0 Client ID (tipo Web) con redirect URI `https://<ref>.supabase.co/auth/v1/callback`; pega client ID y secret en Supabase → **Authentication → Providers → Google** y actívalo.
 6. (Opcional, agiliza el desarrollo) **Authentication → Providers → Email**: desactiva "Confirm email".

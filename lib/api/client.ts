@@ -1,4 +1,6 @@
+import type { BusyBlockInput } from "@/lib/availability";
 import type {
+  BusyBlock,
   Category,
   CompletedTask,
   Habit,
@@ -180,6 +182,15 @@ export const api = {
     remove: (id: string, strategy: "move" | "delete") =>
       request<{ ok: true }>(`/api/categories/${id}?strategy=${strategy}`, {
         method: "DELETE",
+      }),
+  },
+  availability: {
+    get: () => request<{ blocks: BusyBlock[] }>("/api/availability"),
+    /** Manda la semana entera; una lista vacía deja al usuario disponible 24/7. */
+    save: (blocks: BusyBlockInput[]) =>
+      request<{ blocks: BusyBlockInput[] }>("/api/availability", {
+        method: "PUT",
+        body: JSON.stringify({ blocks }),
       }),
   },
   habits: {

@@ -3,8 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Home, Info, LogOut, Plus, Target } from "@/components/icons";
+import { Clock, Home, Info, LogOut, Plus, Target } from "@/components/icons";
+import { AvailabilityDialog } from "@/components/availability/AvailabilityDialog";
 import { CategoryIcon } from "@/components/categories/CategoryIcon";
+import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { LoadingButton } from "@/components/ui/loading-button";
@@ -30,6 +32,7 @@ export function MobileMenu({ user, categories, onNavigate }: MobileMenuProps) {
   const t = useT();
   const router = useRouter();
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+  const [availabilityOpen, setAvailabilityOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
 
   async function handleSignOut() {
@@ -119,22 +122,37 @@ export function MobileMenu({ user, categories, onNavigate }: MobileMenuProps) {
             </div>
           </div>
           <Separator className="my-4" />
-          <LoadingButton
-            variant="outline"
-            className="w-full text-destructive hover:text-destructive"
-            onClick={handleSignOut}
-            loading={signingOut}
-            data-testid="sign-out"
-          >
-            {!signingOut && <LogOut className="size-4" />}
-            {t.auth.signOut}
-          </LoadingButton>
+          <div className="space-y-2">
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => setAvailabilityOpen(true)}
+              data-testid="set-availability"
+            >
+              <Clock className="size-4" />
+              {t.availability.menuItem}
+            </Button>
+            <LoadingButton
+              variant="outline"
+              className="w-full text-destructive hover:text-destructive"
+              onClick={handleSignOut}
+              loading={signingOut}
+              data-testid="sign-out"
+            >
+              {!signingOut && <LogOut className="size-4" />}
+              {t.auth.signOut}
+            </LoadingButton>
+          </div>
         </CardContent>
       </Card>
 
       <CategoryFormDialog
         open={categoryDialogOpen}
         onOpenChange={setCategoryDialogOpen}
+      />
+      <AvailabilityDialog
+        open={availabilityOpen}
+        onOpenChange={setAvailabilityOpen}
       />
     </div>
   );

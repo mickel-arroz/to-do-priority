@@ -1,5 +1,10 @@
 import { addDays } from "date-fns";
 import { z } from "zod";
+import {
+  summarizeAvailability,
+  type AvailabilitySummary,
+  type BusyBlockInput,
+} from "@/lib/availability";
 import { computeHabitProgress } from "@/lib/habits";
 import type { Locale } from "@/lib/i18n";
 import { formatDate, parseDate } from "@/lib/recurrence";
@@ -80,6 +85,11 @@ export type AdvicePayload = {
   failedLastWeek: number;
   /** Sólo hábitos activos: los terminados no consumen generaciones. */
   habits: AdviceHabitSummary[];
+  /**
+   * Tiempo del que el usuario dispone de verdad. Va siempre, configurado o no:
+   * sin él la IA reparte 24 horas al día. Ver `lib/availability.ts`.
+   */
+  availability: AvailabilitySummary;
 };
 
 function shift(today: string, days: number): string {
@@ -116,8 +126,10 @@ export function buildAdvicePayload(input: {
   habits: Habit[];
   logs: HabitLog[];
   today: string;
+  /** Tiempo ocupado de la semana tipo; ausente = disponibilidad sin configurar. */
+  busyBlocks?: BusyBlockInput[];
 }): AdvicePayload {
-  const { tasks, habits, logs, today } = input;
+  const { tasks, habits, logs, today, busyBlocks } = input;
   const weekAgo = adviceWindowStart(today);
   const weekAhead = shift(today, ADVICE_WINDOW_DAYS);
 
@@ -143,6 +155,7 @@ export function buildAdvicePayload(input: {
 
   return {
     today,
+    availability: summarizeAvailability(busyBlocks ?? []),
     pending: sortByPriority(open)
       .slice(0, ADVICE_MAX_PENDING_TASKS)
       .map((t) => ({
@@ -198,7 +211,11 @@ export function buildAdvicePayload(input: {
   };
 }
 
-/** Sin nada que contar no se reclama el día ni se llama a la IA. */
+/**
+ * Sin nada que contar no se reclama el día ni se llama a la IA. La
+ * disponibilidad no cuenta: es contexto para aconsejar, no algo sobre lo que
+ * aconsejar, así que por sí sola nunca dispara una generación.
+ */
 export function isAdvicePayloadEmpty(payload: AdvicePayload): boolean {
   return (
     payload.pending.length === 0 &&

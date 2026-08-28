@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { MAX_BLOCKS_PER_DAY, MINUTES_IN_DAY } from "@/lib/availability";
 import { LIMITS } from "@/lib/limits";
 
 export const taskSchema = z.object({
@@ -44,6 +45,23 @@ export const habitSchema = habitBaseSchema.refine(futureEndDate, {
 export const habitUpdateSchema = habitBaseSchema
   .partial()
   .refine(futureEndDate, { error: "end_date_not_future", path: ["end_date"] });
+
+/**
+ * La disponibilidad se guarda entera: el cuerpo trae la semana completa y
+ * reemplaza a la anterior, así que una lista vacía es válida y significa
+ * "disponible 24/7". Los solapes no se rechazan, se funden al normalizar.
+ */
+export const busyBlocksSchema = z.object({
+  blocks: z
+    .array(
+      z.object({
+        weekday: z.number().int().min(0).max(6),
+        start_minute: z.number().int().min(0).max(MINUTES_IN_DAY - 1),
+        end_minute: z.number().int().min(1).max(MINUTES_IN_DAY),
+      })
+    )
+    .max(MAX_BLOCKS_PER_DAY * 7),
+});
 
 /**
  * Turn a Zod failure into a specific client error. String length overflows

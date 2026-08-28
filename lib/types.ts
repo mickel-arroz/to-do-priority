@@ -91,3 +91,17 @@ export type Profile = {
   full_name: string | null;
   avatar_url: string | null;
 };
+
+/**
+ * Un tramo de tiempo ocupado de la semana tipo del usuario, en minutos desde
+ * medianoche e intervalo semiabierto `[start_minute, end_minute)`. 1440 es el
+ * fin del día. Ver `lib/availability.ts`.
+ */
+export type BusyBlock = {
+  id: string;
+  user_id: string;
+  /** 0 = domingo .. 6 = sábado */
+  weekday: number;
+  start_minute: number;
+  end_minute: number;
+};

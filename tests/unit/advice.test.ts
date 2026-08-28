@@ -70,6 +70,16 @@ function build(input: Partial<Parameters<typeof buildAdvicePayload>[0]> = {}) {
 }
 
 describe("buildAdvicePayload", () => {
+  it("carries the availability, configured or not", () => {
+    expect(build().availability.configured).toBe(false);
+    expect(
+      build({
+        busyBlocks: [{ weekday: 1, start_minute: 540, end_minute: 1020 }],
+      }).availability.days.find((d) => d.day === "monday")?.busyHours
+    ).toBe(8);
+  });
+
+
   it("keeps overdue tasks whose due date falls in the last 7 days", () => {
     const payload = build({
       tasks: [

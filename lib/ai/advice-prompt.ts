@@ -1,5 +1,6 @@
 import { Type } from "@google/genai";
 import type { AdvicePayload } from "@/lib/advice";
+import { SLEEP_HOURS } from "@/lib/availability";
 
 /**
  * Longitud que se le pide al modelo por consejo. Es una **instrucción del
@@ -68,6 +69,7 @@ export function buildAdvicePrompt(payload: AdvicePayload): string {
 
   const overview = JSON.stringify({
     today: payload.today,
+    availability: payload.availability,
     pendingTasks: payload.pending,
     overdueInTheLast7Days: payload.overdueLastWeek,
     dueInTheNext7Days: payload.dueNextWeek,
@@ -103,6 +105,12 @@ STYLE — every piece of advice:
 - BILINGUAL: write every text in BOTH Spanish ("es") and English ("en"). Natural prose in each language, not a word-by-word translation.
 
 THE POMODORO FIELD — "pomodoroMinutes" is how many minutes of focused work the user set aside for that task with the app's pomodoro timer. Read it as THEIR OWN estimate of what the task costs, and use it to reason about load against the time they have: add it up across what is due soon, contrast a heavy estimate with a near deadline, or suggest starting the one that fits the time left today. When it is null the user simply did not set a timer for that task — say nothing about it, and NEVER treat null or a missing value as "zero minutes" or as a quick task. There is no record of pomodoros actually run or completed, so never claim the user did, skipped or abandoned any session.
+
+THE TIME BUDGET — the user does NOT have 24 hours in a day, and advice that ignores that is useless. Reason inside "availability" in the overview:
+- Sleep is non-negotiable: always assume around ${SLEEP_HOURS} hours of it, so at most about ${24 - SLEEP_HOURS} waking hours exist on any day. Never plan as if the whole day were free.
+- When "configured" is false the user has told you nothing about their commitments. Work with roughly ${24 - SLEEP_HOURS - 1} to ${24 - SLEEP_HOURS} waking hours and say NOTHING about their schedule, their job or their blocks: you do not know them.
+- When "configured" is true, "days" carries their own busy time — hours already committed outside this app, such as a job or classes — as "busy" ranges in 24-hour local time, plus "busyHours" and "freeHours" (waking hours left once sleep and those blocks are gone). Weigh what you ask of them against the "freeHours" of the day the work actually falls on: a task due on a 3-hour day is a very different ask from the same task on a 12-hour day. When the load clearly exceeds the time left, say so plainly and help them move or cut something instead of proposing more.
+- Never suggest working inside a busy block or during sleep, never invent a commitment that is not in "days", and never read the numbers back as if they were a schedule you drew up for them.
 
 VOCABULARY — this product has a fixed glossary. Breaking it reads as a bug:
 - In Spanish call it "hábito", ALWAYS. NEVER "meta", "objetivo", "reto" or "desafío", not even as a synonym to avoid repetition.

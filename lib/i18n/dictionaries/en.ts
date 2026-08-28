@@ -165,6 +165,33 @@ export const en = {
     dark: "Dark",
     language: "Language",
   },
+  availability: {
+    menuItem: "Set availability",
+    title: "Set your busy time",
+    description:
+      "Mark the time you are busy outside your tasks: a job, classes, anything this app doesn't track. It is discounted along with about 7 hours of sleep, so the advice fits the hours you actually have left.",
+    busyLabel: "Busy",
+    freeDay: "Free all day",
+    addBlock: "Add block",
+    removeBlock: "Remove block",
+    copyToAll: "Apply to every day",
+    from: "From",
+    to: "To",
+    reset: "Reset",
+    resetHint: "Available 24/7",
+    hoursBusy: "h busy",
+    saved: "Busy time saved",
+    invalidRange: "The end time must be later than the start time",
+    days: {
+      mon: "Monday",
+      tue: "Tuesday",
+      wed: "Wednesday",
+      thu: "Thursday",
+      fri: "Friday",
+      sat: "Saturday",
+      sun: "Sunday",
+    },
+  },
   about: {
     title: "About this project",
     projectDescription:

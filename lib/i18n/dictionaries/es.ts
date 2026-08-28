@@ -169,6 +169,33 @@ export const es: Dictionary = {
     dark: "Oscuro",
     language: "Idioma",
   },
+  availability: {
+    menuItem: "Establecer disponibilidad",
+    title: "Establecer disponibilidad",
+    description:
+      "Marca el tiempo en el que estás ocupado fuera de tus tareas: el trabajo, las clases, lo que sea que no vive en esta app. Se descuenta junto con unas 7 horas de sueño, para que los consejos se ajusten a las horas que de verdad te quedan.",
+    busyLabel: "Ocupado",
+    freeDay: "Libre todo el día",
+    addBlock: "Añadir bloque",
+    removeBlock: "Quitar bloque",
+    copyToAll: "Aplicar a todos los días",
+    from: "Desde",
+    to: "Hasta",
+    reset: "Restablecer",
+    resetHint: "Disponible 24/7",
+    hoursBusy: "h ocupadas",
+    saved: "Disponibilidad guardada",
+    invalidRange: "La hora de fin debe ser posterior a la de inicio",
+    days: {
+      mon: "Lunes",
+      tue: "Martes",
+      wed: "Miércoles",
+      thu: "Jueves",
+      fri: "Viernes",
+      sat: "Sábado",
+      sun: "Domingo",
+    },
+  },
   about: {
     title: "Acerca de este proyecto",
     projectDescription:

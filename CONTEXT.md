@@ -79,6 +79,18 @@ _Avoid_: Refresco, sincronización, job
 
 ### Tiempo
 
+**Tiempo ocupado**:
+Los tramos horarios de una semana tipo en los que el usuario no está disponible
+para sus tareas: el trabajo, las clases, lo que no vive en esta app. No bloquea
+nada ni se pinta en ningún calendario; sólo alimenta el prompt.
+_Avoid_: Agenda, horario, calendario, tiempo disponible
+
+**Disponibilidad**:
+Lo que le queda al usuario una vez descontados el sueño y su tiempo ocupado. Es
+el tiempo sobre el que la IA aconseja, y por eso nunca son 24 horas: sin nada
+configurado se asumen unas 16 o 17.
+_Avoid_: Tiempo libre, capacidad, ancho de banda
+
 **Día del usuario**:
 La fecha vigente en la zona horaria del usuario, no la del servidor. Es la unidad que
 decide si algo está vencido, si una racha sigue viva y si toca una nueva generación
