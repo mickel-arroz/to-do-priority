@@ -204,7 +204,7 @@ export function AvailabilityDialog({
           <FormFieldset busy={saving}>
             <div className="max-h-[52dvh] space-y-2 overflow-y-auto py-1 pr-1">
               {loading
-                ? WEEK_ORDER.map((d) => <Skeleton key={d} className="h-14 w-full" />)
+                ? WEEK_ORDER.map((d) => <Skeleton key={d} className="h-[46px] w-full" />)
                 : WEEK_ORDER.map((weekday) => {
                     const blocks = week[weekday];
                     const busy = blocks.length > 0;
