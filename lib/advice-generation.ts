@@ -2,10 +2,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   adviceWindowStart,
   buildAdvicePayload,
+  canAttemptAdviceToday,
   linkedTaskIds,
   parseAdviceResponse,
   shouldGenerateAdvice,
-  wasAdviceAttemptedToday,
+  type AdviceDayState,
 } from "@/lib/advice";
 import { adviceSchema, buildAdvicePrompt } from "@/lib/ai/advice-prompt";
 import { createAdviceProvider } from "@/lib/ai/provider";
@@ -13,14 +14,15 @@ import { toBlockInputs } from "@/lib/availability";
 import type { BusyBlock, Habit, HabitLog, Task } from "@/lib/types";
 
 /**
- * Generación diaria: una única petición a la IA por usuario y por día, de la
- * que salen a la vez el consejo de inicio y los consejos de todos sus hábitos
- * activos (ver docs/adr/0002).
+ * Generación diaria: una única petición *acertada* a la IA por usuario y por
+ * día, de la que salen a la vez el consejo de inicio y los consejos de todos
+ * sus hábitos activos (ver docs/adr/0002). Un intento fallido no gasta el día:
+ * quedan otros, hasta ADVICE_ATTEMPTS_PER_DAY.
  *
  * La dispara `after()` desde el layout autenticado, así que corre después de
  * enviar la respuesta y nunca entra en el camino del render. Por eso jamás
  * lanza: el usuario no puede hacer nada con un fallo de la IA, y mientras tanto
- * sigue viendo el consejo de ayer o una frase motivacional.
+ * sigue viendo el consejo anterior o una frase motivacional.
  */
 export async function runDailyAdviceGeneration(
   supabase: SupabaseClient,
@@ -30,21 +32,26 @@ export async function runDailyAdviceGeneration(
     // Esto corre en cada navegación autenticada, así que lo primero es la
     // pregunta más barata: una lectura por clave primaria. Casi siempre corta
     // aquí y no se toca ninguna otra tabla.
-    const { data: state, error: stateError } = await supabase
+    const { data: row, error: stateError } = await supabase
       .from("user_advice")
-      .select("last_attempt_date")
+      .select("last_attempt_date, last_advice_date, attempt_count")
       .maybeSingle();
 
     // Sin poder leer el estado no hay idempotencia posible, así que no se
-    // sigue. El caso típico es que falte la migración 0005.
+    // sigue. El caso típico es que falte la migración 0005 o la 0007.
     if (stateError) {
       console.error("[advice] no se pudo leer user_advice", stateError.message);
       return;
     }
 
-    const lastAttemptDate = state?.last_attempt_date ?? null;
+    // Un usuario sin fila todavía no ha intentado nada.
+    const state: AdviceDayState = {
+      lastAttemptDate: row?.last_attempt_date ?? null,
+      lastAdviceDate: row?.last_advice_date ?? null,
+      attemptCount: row?.attempt_count ?? 0,
+    };
 
-    if (wasAdviceAttemptedToday(lastAttemptDate, today)) return;
+    if (!canAttemptAdviceToday(state, today)) return;
 
     const [{ data: habits }, { data: logs }, { data: busyBlocks }] =
       await Promise.all([
@@ -79,19 +86,19 @@ export async function runDailyAdviceGeneration(
       today,
     });
 
-    if (!shouldGenerateAdvice({ payload, lastAttemptDate, today })) return;
+    if (!shouldGenerateAdvice({ payload, state, today })) return;
 
-    // Reclamar el día es lo último antes de gastar la llamada: si otra
-    // ejecución ya se lo llevó, ésta se retira sin llamar.
+    // Reclamar un intento es lo último antes de gastar la llamada: si otra
+    // ejecución ya se llevó éste, ésta se retira sin llamar.
     const { data: claimed, error: claimError } = await supabase.rpc(
       "claim_advice_day",
       { p_day: today }
     );
     if (claimError) {
-      console.error("[advice] no se pudo reclamar el día", claimError.message);
+      console.error("[advice] no se pudo reclamar el intento", claimError.message);
       return;
     }
-    // Otra pestaña se llevó el día: es lo normal, no es un fallo.
+    // Otra pestaña se llevó el intento, o el día ya los agotó: no es un fallo.
     if (claimed !== true) return;
 
     const provider = await createAdviceProvider();
@@ -126,7 +133,8 @@ export async function runDailyAdviceGeneration(
       `[advice] generado con ${model}: inicio + ${Object.keys(parsed.habits).length} hábito(s)`
     );
   } catch (error) {
-    // El día ya quedó reclamado, así que esto no se reintenta hoy
+    // El intento queda gastado, pero al día le quedan otros: la siguiente
+    // navegación vuelve a probar hasta agotar ADVICE_ATTEMPTS_PER_DAY.
     console.error("[advice] generación diaria fallida", error);
   }
 }

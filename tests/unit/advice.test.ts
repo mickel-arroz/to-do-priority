@@ -8,9 +8,10 @@ import {
   linkedTaskIds,
   parseAdviceResponse,
   resolveAdviceText,
+  ADVICE_ATTEMPTS_PER_DAY,
+  canAttemptAdviceToday,
   shouldGenerateAdvice,
   toBilingual,
-  wasAdviceAttemptedToday,
 } from "@/lib/advice";
 import type { Habit, HabitLog, Priority, Subtask, Task, TaskStatus } from "@/lib/types";
 
@@ -331,35 +332,89 @@ describe("isAdvicePayloadEmpty", () => {
 
 describe("shouldGenerateAdvice", () => {
   const payload = build({ tasks: [task({ id: "1" })] });
+  const fresh = { lastAttemptDate: null, lastAdviceDate: null, attemptCount: 0 };
 
   it("does not generate for a user without tasks or habits", () => {
     expect(
-      shouldGenerateAdvice({ payload: build(), lastAttemptDate: null, today: TODAY })
+      shouldGenerateAdvice({ payload: build(), state: fresh, today: TODAY })
     ).toBe(false);
   });
 
-  it("does not generate when today was already attempted", () => {
-    expect(shouldGenerateAdvice({ payload, lastAttemptDate: TODAY, today: TODAY })).toBe(
-      false
-    );
+  it("does not generate when today's advice is already saved", () => {
+    expect(
+      shouldGenerateAdvice({
+        payload,
+        state: { lastAttemptDate: TODAY, lastAdviceDate: TODAY, attemptCount: 1 },
+        today: TODAY,
+      })
+    ).toBe(false);
   });
 
   it("generates when the last attempt was yesterday", () => {
     expect(
-      shouldGenerateAdvice({ payload, lastAttemptDate: "2026-08-13", today: TODAY })
+      shouldGenerateAdvice({
+        payload,
+        state: {
+          lastAttemptDate: "2026-08-13",
+          lastAdviceDate: "2026-08-13",
+          attemptCount: ADVICE_ATTEMPTS_PER_DAY,
+        },
+        today: TODAY,
+      })
     ).toBe(true);
   });
 
   it("generates when nothing was ever attempted", () => {
-    expect(shouldGenerateAdvice({ payload, lastAttemptDate: null, today: TODAY })).toBe(
-      true
+    expect(shouldGenerateAdvice({ payload, state: fresh, today: TODAY })).toBe(true);
+  });
+});
+
+describe("canAttemptAdviceToday", () => {
+  const attempted = (attemptCount: number) => ({
+    lastAttemptDate: TODAY,
+    lastAdviceDate: null,
+    attemptCount,
+  });
+
+  it("answers from the state row alone, without the user's data", () => {
+    expect(
+      canAttemptAdviceToday(
+        { lastAttemptDate: null, lastAdviceDate: null, attemptCount: 0 },
+        TODAY
+      )
+    ).toBe(true);
+  });
+
+  it("stops once today's advice is saved, whatever the attempt count", () => {
+    expect(
+      canAttemptAdviceToday(
+        { lastAttemptDate: TODAY, lastAdviceDate: TODAY, attemptCount: 1 },
+        TODAY
+      )
+    ).toBe(false);
+  });
+
+  it("retries a failed attempt instead of burning the whole day", () => {
+    expect(canAttemptAdviceToday(attempted(1), TODAY)).toBe(true);
+  });
+
+  it("stops after the day runs out of attempts", () => {
+    expect(canAttemptAdviceToday(attempted(ADVICE_ATTEMPTS_PER_DAY), TODAY)).toBe(
+      false
     );
   });
 
-  it("answers today's attempt without looking at the user's data", () => {
-    expect(wasAdviceAttemptedToday(TODAY, TODAY)).toBe(true);
-    expect(wasAdviceAttemptedToday("2026-08-13", TODAY)).toBe(false);
-    expect(wasAdviceAttemptedToday(null, TODAY)).toBe(false);
+  it("starts a new day with a clean counter", () => {
+    expect(
+      canAttemptAdviceToday(
+        {
+          lastAttemptDate: "2026-08-13",
+          lastAdviceDate: "2026-08-13",
+          attemptCount: ADVICE_ATTEMPTS_PER_DAY,
+        },
+        TODAY
+      )
+    ).toBe(true);
   });
 });
 

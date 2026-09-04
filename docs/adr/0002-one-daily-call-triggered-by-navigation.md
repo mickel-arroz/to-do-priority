@@ -4,8 +4,13 @@ Todos los consejos de un usuario —el de inicio y el de cada hábito activo— 
 única petición a la IA por día. La dispara `after()` de `next/server` desde
 `app/(app)/layout.tsx`, el único punto por el que pasa toda página autenticada: corre
 después de enviar la respuesta, así que jamás bloquea el render. Antes de llamar, un upsert
-condicional reclama el día de forma atómica, de modo que varias pestañas simultáneas
-produzcan una sola llamada y un fallo no se reintente en bucle.
+condicional reclama un intento de forma atómica, de modo que varias pestañas simultáneas
+produzcan una sola llamada.
+
+Un día concede unos pocos intentos, no uno solo (ver la migración 0007). Reclamar y
+acertar no son el mismo acto: la latencia de los modelos es irregular y un timeout no
+puede costar el día entero, pero agotados los intentos se para hasta mañana, que es lo
+que evita el bucle.
 
 ## Considered Options
 
@@ -20,6 +25,7 @@ cuando ve el panorama completo del usuario en el mismo prompt.
 ## Consequences
 
 Un consejo nuevo no aparece en la vista que lo disparó, sino en la siguiente navegación o
-recarga. Es deliberado: evita cualquier estado de carga en pantalla. Un hábito creado
+recarga. Es deliberado: la página nunca espera a la IA ni muestra un estado de carga,
+sino el consejo anterior mientras tanto. Un hábito creado
 después de la generación del día no tiene consejo hasta mañana y muestra una frase
 motivacional mientras tanto.

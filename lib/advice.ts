@@ -226,26 +226,48 @@ export function isAdvicePayloadEmpty(payload: AdvicePayload): boolean {
 }
 
 /**
- * Reclamar el día y marcar el intento son el mismo acto, así que un fallo
- * tampoco se reintenta en bucle: basta con que ya se haya intentado hoy.
+ * Intentos de generación que se permiten por usuario y día.
  *
- * Se comprueba aparte de `shouldGenerateAdvice` porque es lo único que puede
- * decidirse sin mirar los datos del usuario, y en la inmensa mayoría de las
- * navegaciones basta con esto para no leer nada más.
+ * Un fallo del proveedor no puede costar el día entero: la latencia de los
+ * modelos es irregular y el intento siguiente suele salir bien. Pero tampoco
+ * se reintenta en bucle, que es lo que el diseño original quería evitar: unos
+ * pocos tiros y se para hasta mañana.
+ *
+ * Lo mismo decide `claim_advice_day` en la migración 0007, que es quien manda:
+ * aquí se repite para cortar antes de gastar una llamada a la base.
  */
-export function wasAdviceAttemptedToday(
-  lastAttemptDate: string | null,
+export const ADVICE_ATTEMPTS_PER_DAY = 3;
+
+/** La fila de estado del usuario, que es todo lo que hace falta para saber si toca generar. */
+export type AdviceDayState = {
+  lastAttemptDate: string | null;
+  lastAdviceDate: string | null;
+  attemptCount: number;
+};
+
+/**
+ * ¿Queda algo que intentar hoy? Se responde sólo con la fila de estado, sin
+ * mirar los datos del usuario, y por eso se comprueba aparte de
+ * `shouldGenerateAdvice`: en la inmensa mayoría de las navegaciones el consejo
+ * de hoy ya está guardado y basta con esto para no leer ninguna otra tabla.
+ */
+export function canAttemptAdviceToday(
+  state: AdviceDayState,
   today: string
 ): boolean {
-  return lastAttemptDate === today;
+  // Ya hay consejo de hoy: no hay nada que generar.
+  if (state.lastAdviceDate === today) return false;
+  // Día nuevo: el contador de ayer no cuenta.
+  if (state.lastAttemptDate !== today) return true;
+  return state.attemptCount < ADVICE_ATTEMPTS_PER_DAY;
 }
 
 export function shouldGenerateAdvice(input: {
   payload: AdvicePayload;
-  lastAttemptDate: string | null;
+  state: AdviceDayState;
   today: string;
 }): boolean {
-  if (wasAdviceAttemptedToday(input.lastAttemptDate, input.today)) return false;
+  if (!canAttemptAdviceToday(input.state, input.today)) return false;
   return !isAdvicePayloadEmpty(input.payload);
 }
 

@@ -5,11 +5,20 @@ import type { AdviceGeneration, AdviceProvider } from "@/lib/ai/provider";
  * Cascada de modelos, del mejor al más barato. Todos verificados contra la API
  * con la clave del proyecto: un id retirado no es gratis —gasta un viaje de ida
  * y vuelta— y si la cascada entera está retirada no queda nada que responda.
+ *
+ * El último no es un Gemini a propósito. La cuota no es una sola bolsa —medido:
+ * `3.6-flash` y `3.5-flash` devolvían 429 mientras `3.1-flash-lite` seguía
+ * respondiendo—, pero sí se agota por familia y de arriba abajo: los modelos
+ * grandes caen primero y juntos. `gemma-4-31b-it` es de otra familia y de los
+ * más estables medidos, así que sigue en pie cuando la de Gemini aprieta. Es la
+ * red de seguridad, no una opción de calidad: sólo le llega el turno cuando
+ * todo lo anterior falló.
  */
 const MODELS = [
   "gemini-3.6-flash",
   "gemini-3.5-flash",
   "gemini-3.1-flash-lite",
+  "gemma-4-31b-it",
 ];
 
 /** Un reintento inmediato por modelo: corremos dentro de una función serverless. */
@@ -21,12 +30,32 @@ const ATTEMPTS_PER_MODEL = 2;
  * La generación corre en `after()`, o sea dentro de la misma invocación que
  * renderiza la página (`maxDuration = 60`). Una llamada sin tope se lleva por
  * delante la respuesta entera con un FUNCTION_INVOCATION_TIMEOUT: ningún
- * consejo vale una página caída. Pasado el presupuesto se abandona el día.
+ * consejo vale una página caída. Pasado el presupuesto se abandona el intento.
+ *
+ * Se reparte a razón de un `ATTEMPT_TIMEOUT_MS` por modelo, de modo que el
+ * último de la cascada reciba su tope entero aunque todos los anteriores se
+ * hayan agotado. Es la propiedad que importa: con el reparto anterior
+ * (25 s totales, 10 s por intento) dos timeouts dejaban al último eslabón
+ * corriendo con 5 s, y era ahí donde se perdía el día.
+ *
+ * De ahí que este número no se elija: es `MODELS.length * ATTEMPT_TIMEOUT_MS`,
+ * y añadir un modelo obliga a recalcularlo. El techo es `maxDuration`, menos lo
+ * que necesitan el render de la página, las lecturas que arman la carga y el
+ * guardado posterior.
  */
-const TOTAL_BUDGET_MS = 25_000;
+const TOTAL_BUDGET_MS = 48_000;
 
-/** Tope por intento. Medido: un flash con thinking MINIMAL responde en 2–4 s. */
-const ATTEMPT_TIMEOUT_MS = 10_000;
+/**
+ * Tope por intento. La latencia de los flash es bimodal —medida con el prompt
+ * real: la mayoría de respuestas caen entre 2 y 5 s, pero hay picos de más de
+ * 35 s—, así que el tope no persigue la media sino que corta la cola larga sin
+ * castigar a un modelo que hoy va lento.
+ *
+ * El suelo lo pone el más lento que aún merece la pena esperar: `3.5-flash`
+ * ronda los 10,5 s de forma consistente y `gemma-4-31b-it` los 8. Bajar de 12 s
+ * los dejaría fuera siempre.
+ */
+const ATTEMPT_TIMEOUT_MS = 12_000;
 
 function errorMessage(err: unknown): string {
   return String((err as Error)?.message ?? err);
