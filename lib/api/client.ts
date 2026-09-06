@@ -27,7 +27,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     ...init,
     headers: { "Content-Type": "application/json", ...init?.headers },
   });
-  if (res.status === 401) {
+  // En /api/auth/* un 401 significa "estas credenciales no valen", no "se
+  // acabó la sesión": hay que devolverlo a quien llamó para poder pintar el
+  // error, en vez de recargar la pantalla de login y perderlo.
+  if (res.status === 401 && !path.startsWith("/api/auth/")) {
     // Full navigation on purpose: the session is gone, so client state
     // must be discarded entirely
     window.location.assign(new URL("/login", window.location.origin));

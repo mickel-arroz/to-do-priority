@@ -10,6 +10,18 @@ function isPublic(pathname: string) {
 }
 
 export async function updateSession(request: NextRequest) {
+  // Red de seguridad: si el "Site URL" de Supabase no apunta a /auth/callback,
+  // el código de OAuth aterriza en la raíz (`/?code=...`) y sin esto acabaría
+  // en /login como si la sesión hubiera fallado. Lo reencaminamos al callback.
+  if (
+    request.nextUrl.pathname === "/" &&
+    request.nextUrl.searchParams.has("code")
+  ) {
+    const callback = request.nextUrl.clone();
+    callback.pathname = "/auth/callback";
+    return NextResponse.redirect(callback);
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(

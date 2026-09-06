@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { jsonError } from "@/app/api/_lib/auth";
+import { getSiteOrigin } from "@/lib/site-url";
 
 const registerSchema = z.object({
   fullName: z.string().trim().min(1),
@@ -15,7 +16,7 @@ export async function POST(request: Request) {
   if (!parsed.success) return jsonError("Invalid registration payload", 400);
 
   const { fullName, email, password } = parsed.data;
-  const origin = new URL(request.url).origin;
+  const origin = getSiteOrigin(request);
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({

@@ -76,9 +76,19 @@ npm run dev
 4. **Google Cloud Console**: no hay que tocar nada — el redirect URI autorizado sigue siendo `https://<ref>.supabase.co/auth/v1/callback`, porque Google siempre redirige a Supabase y Supabase luego a tu app (según las Redirect URLs del paso 3).
 
 Notas:
-- El código construye las URLs de callback con el origin de cada request (`/api/auth/google`, registro), así que la misma build funciona en localhost, previews y producción sin variables adicionales.
+- El código construye las URLs de callback con `getSiteOrigin()` (`lib/site-url.ts`): usa la cabecera `x-forwarded-host` que pone el proxy del hosting y, si no está, el origin de la request. Así la misma build funciona en localhost, previews y producción sin variables adicionales. Solo si tu hosting no envía esa cabecera define `NEXT_PUBLIC_SITE_URL=https://tu-dominio.com` (en Vercel, **solo en Production**: en Preview haría que los deploys de prueba redirigieran a producción).
 - La PWA (service worker, instalación) requiere HTTPS; en Vercel ya lo tienes. Verifica `https://<tu-app>.vercel.app/manifest.webmanifest` tras el deploy.
 - Si usas dominio propio, repite el paso 3 con ese dominio.
+
+### Al iniciar sesión vuelvo a `http://localhost:3000/?code=...`
+
+Es el paso 3 sin hacer. Cuando el `redirectTo` que envía la app no está en la
+lista **Redirect URLs**, Supabase ignora ese destino y manda al usuario al
+**Site URL** del proyecto, que por defecto es `http://localhost:3000` — de ahí
+que el navegador acabe en una URL local que en producción no existe. El código
+que llega a la raíz (`/?code=...`) se reencamina solo a `/auth/callback`, pero
+el dominio equivocado no hay forma de arreglarlo desde la app: corrige **Site
+URL** y **Redirect URLs** en Supabase → Authentication → URL Configuration.
 
 ## Arquitectura
 
