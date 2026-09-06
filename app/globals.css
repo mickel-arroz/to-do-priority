@@ -240,6 +240,23 @@
       var(--card) 55%
     );
   }
+  /* Panel de marca de las pantallas de acceso: lavado diagonal continuo
+     (nada de halos difuminados, que dejaban manchas y un borde visible donde
+     acababa el blur) sobre una superficie opaca. */
+  .gradient-auth-panel {
+    background-image:
+      radial-gradient(
+        ellipse 75% 55% at 10% -5%,
+        color-mix(in oklab, var(--primary) 18%, transparent),
+        transparent 65%
+      ),
+      linear-gradient(
+        160deg,
+        color-mix(in oklab, var(--accent) 50%, var(--card)) 0%,
+        var(--card) 58%,
+        color-mix(in oklab, var(--primary) 12%, var(--card)) 100%
+      );
+  }
   .gradient-streak {
     background-image: linear-gradient(120deg, var(--streak), oklch(0.72 0.14 65));
   }

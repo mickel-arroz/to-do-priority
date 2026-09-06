@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "sonner";
 import { LoadingButton } from "@/components/ui/loading-button";
 import { api } from "@/lib/api/client";
+import { authRequestFailure } from "@/lib/auth/errors";
 import { useT } from "@/lib/i18n/locale-context";
 
 function GoogleIcon() {
@@ -29,7 +29,12 @@ function GoogleIcon() {
   );
 }
 
-export function GoogleButton() {
+/** `onError` deja el fallo en el formulario que lo envuelve, a la vista. */
+export function GoogleButton({
+  onError,
+}: {
+  onError?: (message: string) => void;
+}) {
   const t = useT();
   const [loading, setLoading] = useState(false);
 
@@ -38,8 +43,8 @@ export function GoogleButton() {
     try {
       const { url } = await api.auth.google();
       window.location.href = url;
-    } catch {
-      toast.error(t.common.error);
+    } catch (err) {
+      onError?.(authRequestFailure(err, t, t.auth.oauthError).message);
       setLoading(false);
     }
   }
@@ -48,6 +53,7 @@ export function GoogleButton() {
     <LoadingButton
       type="button"
       variant="outline"
+      size="lg"
       className="w-full"
       onClick={handleClick}
       loading={loading}

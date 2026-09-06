@@ -19,6 +19,8 @@ export {
   Code2,
   Copy,
   ExternalLink,
+  Eye,
+  EyeOff,
   Flame,
   Home,
   Heart,
