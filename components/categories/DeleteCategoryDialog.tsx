@@ -14,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { notifyModalNavigation } from "@/hooks/useModalHistory";
 import { api } from "@/lib/api/client";
 import { useT } from "@/lib/i18n/locale-context";
 import type { Category } from "@/lib/types";
@@ -40,6 +41,7 @@ export function DeleteCategoryDialog({
     try {
       await api.categories.remove(category.id, strategy);
       onOpenChange(false);
+      notifyModalNavigation();
       router.push("/");
       router.refresh();
     } catch {

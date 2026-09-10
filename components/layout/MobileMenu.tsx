@@ -17,6 +17,7 @@ import { LanguageToggle } from "@/components/layout/LanguageToggle";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import type { SidebarCategory } from "@/components/layout/Sidebar";
 import type { UserInfo } from "@/components/layout/UserMenu";
+import { notifyModalNavigation } from "@/hooks/useModalHistory";
 import { api } from "@/lib/api/client";
 import { useT } from "@/lib/i18n/locale-context";
 
@@ -38,6 +39,7 @@ export function MobileMenu({ user, categories, onNavigate }: MobileMenuProps) {
   async function handleSignOut() {
     setSigningOut(true);
     await api.auth.signout();
+    notifyModalNavigation();
     router.push("/login");
     router.refresh();
   }

@@ -3,7 +3,6 @@ import { z } from "zod";
 import { isUnauthorized, jsonError, requireUser } from "@/app/api/_lib/auth";
 import { syncHabitDaysForTask } from "@/app/api/_lib/habit-day";
 import { getNextDueDate } from "@/lib/recurrence";
-import { getUserToday } from "@/lib/server-today";
 import type { Task } from "@/lib/types";
 
 const completeSchema = z.object({ status: z.enum(["yes", "no"]) });
@@ -13,7 +12,7 @@ const completeSchema = z.object({ status: z.enum(["yes", "no"]) });
  * 1. marks it yes/no
  * 2. writes the permanent completion log
  * 3. if recurring, creates the next instance (subtasks reset)
- * 4. recomputes today's habit day for every habit linked to it
+ * 4. recomputes the habit days its due dates affect, for every linked habit
  */
 export async function POST(
   request: Request,
@@ -37,7 +36,6 @@ export async function POST(
   if (task.status !== "pending") return jsonError("already_completed", 409);
 
   const now = new Date();
-  const { today } = await getUserToday();
 
   const { error: completionError } = await ctx.supabase
     .from("task_completions")
@@ -116,11 +114,19 @@ export async function POST(
     }
   }
 
-  // El día objetivo sólo baja cuando TODAS las tareas del hábito de ese día
-  // quedaron cerradas con éxito. Se recalcula también al marcar 'no' para que
-  // una tarea fallada deshaga un día que ya se hubiera acreditado.
+  // El día objetivo sólo baja cuando TODAS las tareas del hábito que vencían
+  // ese día quedaron cerradas con éxito. Se recalcula el día de vencimiento de
+  // la tarea —no el de hoy—, así que cerrarla tarde acredita el día al que
+  // pertenecía. Se recalcula también al marcar 'no' para que una tarea fallada
+  // deshaga un día que ya se hubiera acreditado.
+  //
+  // La instancia siguiente puede nacer con una fecha ya pasada (una tarea
+  // vencida no desplaza su cadencia), y entonces ese día vuelve a tener una
+  // tarea pendiente: hay que recalcularlo también o se quedaría acreditado.
   if (habitLinks && habitLinks.length > 0) {
-    await syncHabitDaysForTask(ctx, task.id, today);
+    const days = [task.due_date];
+    if (nextTask) days.push(nextTask.due_date);
+    await syncHabitDaysForTask(ctx, task.id, days);
   }
 
   return NextResponse.json({ task: updated, nextTask });

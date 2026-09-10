@@ -5,7 +5,7 @@ type PageHeaderProps = {
   title: ReactNode;
   /** Right-aligned actions, e.g. a primary button */
   actions?: ReactNode;
-  /** Optional content under the title (e.g. a streak line, a caption) */
+  /** Optional content under the title (e.g. a caption) */
   subtitle?: ReactNode;
 };
 

@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Check } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { FormFieldset, useLockedOpenChange } from "@/components/ui/busy";
+import { useCoarsePointer } from "@/hooks/useCoarsePointer";
 import { CharCounter } from "@/components/ui/char-counter";
 import { LoadingButton } from "@/components/ui/loading-button";
 import {
@@ -42,6 +43,9 @@ export function CategoryFormDialog({
 }: CategoryFormDialogProps) {
   const t = useT();
   const router = useRouter();
+  // Un autoFocus explícito gana al preventDefault del diálogo, así que en
+  // táctil hay que quitarlo aquí también o el teclado sigue subiendo.
+  const coarsePointer = useCoarsePointer();
   // Default (General) list keeps the reserved `list` icon and can't change it
   const isDefaultList = category?.is_default ?? false;
 
@@ -90,7 +94,11 @@ export function CategoryFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-sm" showCloseButton={!saving}>
+      <DialogContent
+        className="sm:max-w-sm"
+        showCloseButton={!saving}
+        fullScreenOnMobile
+      >
         <DialogHeader>
           <DialogTitle>
             {category ? t.categories.editCategory : t.categories.newCategory}
@@ -107,7 +115,7 @@ export function CategoryFormDialog({
               id="category-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              autoFocus
+              autoFocus={!coarsePointer}
               aria-invalid={nameOver}
               data-testid="category-name-input"
             />

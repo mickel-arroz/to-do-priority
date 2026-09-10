@@ -1,6 +1,6 @@
 "use client";
 
-import { Flame, Plus } from "@/components/icons";
+import { Plus } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { DailyAdvice } from "@/components/advice/DailyAdvice";
 import { CategoryIcon } from "@/components/categories/CategoryIcon";
@@ -27,7 +27,6 @@ type HomeContentProps = {
   tasks: Task[];
   completedToday: Task[];
   categories: Category[];
-  bestStreak: number;
   /** Consejo de inicio del día, o null si todavía no hay ninguno generado. */
   advice: Bilingual | null;
 };
@@ -51,7 +50,6 @@ function HomeSections({
   today,
   dayOfYear,
   categories,
-  bestStreak,
   advice,
 }: HomeContentProps) {
   const t = useT();
@@ -74,16 +72,6 @@ function HomeSections({
     <div className="space-y-6" data-testid="home">
       <PageHeader
         title={`${greeting}${userName ? `, ${userName.split(" ")[0]}` : ""}`}
-        subtitle={
-          bestStreak > 0 && (
-            <p className="mt-1 flex items-center gap-1 text-sm font-semibold">
-              <Flame className="size-4 text-streak" />
-              <span className="gradient-streak bg-clip-text text-transparent">
-                {bestStreak} {t.home.streak}
-              </span>
-            </p>
-          )
-        }
         actions={
           <Button onClick={() => board.openNewTask()} data-testid="new-task">
             <Plus className="size-4" />

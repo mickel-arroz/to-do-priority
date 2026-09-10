@@ -188,31 +188,29 @@ export function buildChartSeries(
   };
 }
 
-export type HabitDayTask = Pick<Task, "status" | "due_date"> &
-  Partial<Pick<Task, "completed_at">>;
+export type HabitDayTask = Pick<Task, "status" | "due_date">;
 
 /**
  * Decide si un día cuenta como día objetivo cumplido para un hábito.
  *
- * El contador de días objetivo sólo baja cuando *todas* las tareas de ese día
- * quedaron cerradas con éxito. Las tareas del día son las que vencen ese día
- * más las que se cerraron ese día aunque vinieran vencidas.
+ * El día lo juzgan sus propias tareas: las que *vencían* ese día. Cuándo se
+ * cerraron no interviene, así que completar hoy algo que vencía ayer acredita
+ * ayer, que es el día al que pertenecía el compromiso.
  *
- *  - alguna tarea del día fallada ('no') → el día no cuenta; tampoco resta ni
- *    rompe nada más: fuera del modo castigo un día fallado sólo deja el
- *    contador igual que estaba
- *  - alguna tarea vinculada pendiente con vencimiento hasta ese día → el día
- *    sigue abierto y no cuenta
- *  - ninguna tarea del día → no hay nada que acreditar
+ *  - alguna tarea del día fallada ('no') o todavía pendiente → el día no
+ *    cuenta; fuera del modo castigo tampoco resta nada, sólo deja el contador
+ *    como estaba
+ *  - ninguna tarea vencía ese día → no hay nada que acreditar
+ *
+ * Las tareas vencidas de otros días no bloquean este: una deuda arrastrada no
+ * puede desacreditar un día que sí se cumplió. Ver
+ * `docs/adr/0005-habit-day-judged-by-due-date.md`.
  */
 export function isHabitDayCompleted(
   tasks: HabitDayTask[],
   day: string
 ): boolean {
-  const ofTheDay = tasks.filter(
-    (t) => t.due_date === day || t.completed_at?.startsWith(day)
-  );
+  const ofTheDay = tasks.filter((t) => t.due_date === day);
   if (ofTheDay.length === 0) return false;
-  if (ofTheDay.some((t) => t.status !== "yes")) return false;
-  return !tasks.some((t) => t.status === "pending" && t.due_date <= day);
+  return ofTheDay.every((t) => t.status === "yes");
 }

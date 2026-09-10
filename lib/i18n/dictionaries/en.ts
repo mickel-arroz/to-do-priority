@@ -150,7 +150,8 @@ export const en = {
     name: "Name",
     description: "Description",
     linkedTasks: "Linked tasks",
-    linkedTasksHint: "The day counts as completed when every linked task is done well",
+    linkedTasksHint:
+      "The day counts as completed when every linked task due that day is done well",
     goalType: "Goal",
     goalDays: "Target days",
     goalDate: "End date",

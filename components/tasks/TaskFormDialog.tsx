@@ -46,6 +46,7 @@ import { api, type TaskInput } from "@/lib/api/client";
 import { apiErrorMessage } from "@/lib/api/error-message";
 import { useT } from "@/lib/i18n/locale-context";
 import { LIMITS } from "@/lib/limits";
+import { DEFAULT_PRIORITY } from "@/lib/priority";
 import type { Category, Priority, Subtask, Task } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -75,7 +76,7 @@ export function TaskFormDialog({
   const [categoryId, setCategoryId] = useState("");
   const [link, setLink] = useState("");
   const [dueDate, setDueDate] = useState(today);
-  const [priority, setPriority] = useState<Priority>(2);
+  const [priority, setPriority] = useState<Priority>(DEFAULT_PRIORITY);
   const [pomodoro, setPomodoro] = useState(0);
   const [recurrence, setRecurrence] = useState<RecurrenceValue>({
     type: "none",
@@ -131,7 +132,7 @@ export function TaskFormDialog({
       );
       setLink(task?.link ?? "");
       setDueDate(task?.due_date ?? today);
-      setPriority((task?.priority as Priority) ?? 2);
+      setPriority((task?.priority as Priority) ?? DEFAULT_PRIORITY);
       setPomodoro(task?.pomodoro_minutes ?? 0);
       setRecurrence({
         type: task?.recurrence_type ?? "none",
@@ -330,6 +331,7 @@ export function TaskFormDialog({
       <DialogContent
         className="max-h-[90dvh] overflow-y-auto sm:max-w-3xl"
         showCloseButton={!busy}
+        fullScreenOnMobile
       >
         <DialogHeader>
           <DialogTitle>{task ? t.tasks.editTask : t.tasks.newTask}</DialogTitle>

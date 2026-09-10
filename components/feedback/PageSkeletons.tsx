@@ -27,10 +27,7 @@ export function HomeSkeleton() {
   return (
     <div className="space-y-6" data-testid="home-skeleton">
       <div className="flex items-center justify-between">
-        <div className="space-y-2">
-          <Skeleton className="h-8 w-56" />
-          <Skeleton className="h-4 w-32" />
-        </div>
+        <Skeleton className="h-8 w-56" />
         <Skeleton className="h-9 w-32 rounded-lg" />
       </div>
       <Skeleton className="h-20 w-full rounded-xl" />

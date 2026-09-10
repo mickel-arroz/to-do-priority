@@ -24,6 +24,7 @@ import { HabitFormDialog } from "@/components/habits/HabitFormDialog";
 import { HabitProgressBar } from "@/components/habits/HabitProgressBar";
 import { StreakBadge } from "@/components/habits/StreakBadge";
 import type { Bilingual } from "@/lib/advice";
+import { notifyModalNavigation } from "@/hooks/useModalHistory";
 import { api } from "@/lib/api/client";
 import { computeHabitProgress } from "@/lib/habits";
 import { useT } from "@/lib/i18n/locale-context";
@@ -74,6 +75,7 @@ export function HabitDetailContent({
     setDeleting(true);
     try {
       await api.habits.remove(habit.id);
+      notifyModalNavigation();
       router.push("/habits");
       router.refresh();
     } catch {
@@ -198,9 +200,6 @@ export function HabitDetailContent({
                   )}
                 />
                 <span className="min-w-0 flex-1 truncate">{task.title}</span>
-                <span className="shrink-0 text-xs text-muted-foreground">
-                  {task.due_date}
-                </span>
               </li>
             ))}
           </ul>

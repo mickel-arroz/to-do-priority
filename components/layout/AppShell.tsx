@@ -8,6 +8,7 @@ import { Sidebar, type SidebarCategory } from "@/components/layout/Sidebar";
 import type { UserInfo } from "@/components/layout/UserMenu";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useT } from "@/lib/i18n/locale-context";
+import { notifyModalNavigation } from "@/hooks/useModalHistory";
 
 type AppShellProps = {
   user: UserInfo;
@@ -30,7 +31,7 @@ export function AppShell({ user, categories, children }: AppShellProps) {
 
       {/* Content leaves room for the collapsed sidebar (desktop) and the
           bottom navbar (mobile) */}
-      <main className="flex-1 pb-20 md:pb-0 md:pl-16">
+      <main className="flex-1 pb-[var(--bottom-nav-h)] md:pb-0 md:pl-16">
         <div className="mx-auto w-full max-w-4xl px-4 py-6 md:px-8">{children}</div>
       </main>
 
@@ -38,9 +39,12 @@ export function AppShell({ user, categories, children }: AppShellProps) {
           open and closed */}
       <BottomNav menuOpen={menuOpen} onToggleMenu={() => setMenuOpen((o) => !o)} />
       <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+        {/* El menú llega hasta arriba pero se detiene sobre la barra inferior:
+            así no queda fondo visible y el botón Menú sigue a mano para
+            cerrarlo con un segundo toque. */}
         <SheetContent
           side="bottom"
-          className="max-h-[85dvh] overflow-y-auto rounded-t-xl pb-24"
+          className="top-0 bottom-[var(--bottom-nav-h)] h-auto overflow-y-auto rounded-none pb-4"
         >
           <SheetHeader className="pb-0">
             <SheetTitle>{t.nav.menu}</SheetTitle>
@@ -49,7 +53,13 @@ export function AppShell({ user, categories, children }: AppShellProps) {
             <MobileMenu
               user={user}
               categories={categories}
-              onNavigate={() => setMenuOpen(false)}
+              onNavigate={() => {
+                // El <Link> va a navegar: el centinela del sheet se abandona
+                // en vez de gastarse, para que el salto no caiga ya sobre la
+                // ruta nueva y eche al usuario de ella.
+                notifyModalNavigation();
+                setMenuOpen(false);
+              }}
             />
           </div>
         </SheetContent>

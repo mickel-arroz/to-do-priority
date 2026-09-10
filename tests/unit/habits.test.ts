@@ -164,7 +164,7 @@ describe("isHabitDayCompleted", () => {
     return { status, due_date, completed_at };
   }
 
-  it("cuenta el día cuando todas las tareas del día son exitosas", () => {
+  it("cuenta el día cuando todas las tareas que vencían ese día son exitosas", () => {
     expect(isHabitDayCompleted([t("yes"), t("yes")], DAY)).toBe(true);
   });
 
@@ -176,22 +176,28 @@ describe("isHabitDayCompleted", () => {
     expect(isHabitDayCompleted([t("yes"), t("pending")], DAY)).toBe(false);
   });
 
-  it("no cuenta el día si arrastra una tarea vencida sin cerrar", () => {
-    expect(isHabitDayCompleted([t("yes"), t("pending", "2026-08-12")], DAY)).toBe(
-      false
-    );
-  });
-
-  it("cuenta la tarea vencida que se cerró con éxito ese día", () => {
+  it("cuenta el día aunque la tarea se cerrara mucho después de vencer", () => {
     expect(
-      isHabitDayCompleted([t("yes", "2026-08-12", `${DAY}T10:00:00Z`)], DAY)
+      isHabitDayCompleted([t("yes", DAY, "2026-08-20T10:00:00Z")], DAY)
     ).toBe(true);
   });
 
-  it("no cuenta la tarea vencida que se cerró como fallada ese día", () => {
-    expect(
-      isHabitDayCompleted([t("no", "2026-08-12", `${DAY}T10:00:00Z`)], DAY)
-    ).toBe(false);
+  it("no deja que una deuda de otro día desacredite este", () => {
+    expect(isHabitDayCompleted([t("yes"), t("pending", "2026-08-12")], DAY)).toBe(
+      true
+    );
+  });
+
+  it("no acredita el día en que se pagó una deuda, sino el que ésta vencía", () => {
+    const tasks = [t("yes", "2026-08-12", `${DAY}T10:00:00Z`)];
+    expect(isHabitDayCompleted(tasks, "2026-08-12")).toBe(true);
+    expect(isHabitDayCompleted(tasks, DAY)).toBe(false);
+  });
+
+  it("no cuenta la tarea vencida que se cerró como fallada", () => {
+    expect(isHabitDayCompleted([t("no", "2026-08-12")], "2026-08-12")).toBe(
+      false
+    );
   });
 
   it("ignora las instancias futuras que crea la recurrencia", () => {

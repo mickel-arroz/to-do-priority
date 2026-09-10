@@ -184,6 +184,7 @@ export function HabitFormDialog({
       <DialogContent
         className="max-h-[90dvh] overflow-y-auto sm:max-w-lg"
         showCloseButton={!saving}
+        fullScreenOnMobile
       >
         <DialogHeader>
           <DialogTitle>{habit ? t.habits.editHabit : t.habits.newHabit}</DialogTitle>
@@ -301,7 +302,7 @@ export function HabitFormDialog({
             <div
               ref={listRef}
               onScroll={handleScroll}
-              className="max-h-44 space-y-1 overflow-y-auto rounded-xl border p-2"
+              className="max-h-44 space-y-1 overflow-y-auto rounded-xl border p-2 max-sm:max-h-none"
             >
               {results.length === 0 && !loading && (
                 <p className="px-2 py-3 text-center text-sm text-muted-foreground">

@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isUnauthorized, jsonError, requireUser } from "@/app/api/_lib/auth";
 import { syncHabitDaysForTask } from "@/app/api/_lib/habit-day";
-import { getUserToday } from "@/lib/server-today";
 import type { Task } from "@/lib/types";
 
 const statusSchema = z.object({ status: z.enum(["pending", "yes", "no"]) });
@@ -33,8 +32,6 @@ export async function POST(
   if (!task) return jsonError("not_found", 404);
   if (task.status === "pending") return jsonError("not_completed", 409);
   if (task.status === target) return NextResponse.json({ task });
-
-  const { today } = await getUserToday();
 
   // Latest completion log row for this task
   const { data: lastCompletion } = await ctx.supabase
@@ -69,7 +66,7 @@ export async function POST(
       .select()
       .single();
     if (error) return jsonError(error.message, 500);
-    await syncHabitDaysForTask(ctx, id, today);
+    await syncHabitDaysForTask(ctx, id, [task.due_date]);
     return NextResponse.json({ task: updated });
   }
 
@@ -89,7 +86,8 @@ export async function POST(
       .eq("id", lastCompletion.id);
   }
   // Pasar una tarea a 'no' revierte el día: deja de contar como día objetivo,
-  // sin restar ninguno de los ya ganados.
-  await syncHabitDaysForTask(ctx, id, today);
+  // sin restar ninguno de los ya ganados. El día que se revisa es el de
+  // vencimiento de la tarea, no el de hoy.
+  await syncHabitDaysForTask(ctx, id, [task.due_date]);
   return NextResponse.json({ task: updated });
 }

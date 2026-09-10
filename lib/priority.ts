@@ -3,6 +3,9 @@ import type { Priority } from "@/lib/types";
 
 export const PRIORITIES: Priority[] = [1, 2, 3, 4];
 
+/** Prioridad con la que nace una tarea nueva. */
+export const DEFAULT_PRIORITY: Priority = 4;
+
 export const priorityClasses: Record<
   Priority,
   { bar: string; badge: string; text: string; dot: string; soft: string; ring: string }

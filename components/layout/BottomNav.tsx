@@ -28,7 +28,7 @@ export function BottomNav({ menuOpen, onToggleMenu }: BottomNavProps) {
   return (
     <nav
       data-testid="bottom-nav"
-      className="fixed inset-x-0 bottom-0 z-40 flex border-t bg-background pb-[env(safe-area-inset-bottom)] md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 flex h-[var(--bottom-nav-h)] border-t bg-background pb-[env(safe-area-inset-bottom)] md:hidden"
     >
       <Link href="/" className={itemClass(!menuOpen && pathname === "/")}>
         <Home className="size-5" />

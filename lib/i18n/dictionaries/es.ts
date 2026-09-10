@@ -153,7 +153,7 @@ export const es: Dictionary = {
     description: "Descripción",
     linkedTasks: "Tareas vinculadas",
     linkedTasksHint:
-      "El día cuenta como cumplido cuando todas las tareas vinculadas se completan bien",
+      "El día cuenta como cumplido cuando todas las tareas vinculadas que vencen ese día se completan bien",
     goalType: "Meta",
     goalDays: "Días objetivo",
     goalDate: "Fecha límite",

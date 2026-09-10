@@ -4,12 +4,27 @@ import * as React from "react"
 import { AlertDialog as AlertDialogPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
+import { useModalOpenState } from "@/hooks/useModalHistory"
 import { Button } from "@/components/ui/button"
 
 function AlertDialog({
+  open,
+  defaultOpen,
+  onOpenChange,
   ...props
 }: React.ComponentProps<typeof AlertDialogPrimitive.Root>) {
-  return <AlertDialogPrimitive.Root data-slot="alert-dialog" {...props} />
+  // La apertura se controla siempre desde aquí, también cuando el consumidor
+  // no pasa `onOpenChange`: es lo que permite cerrar la modal desde el botón
+  // "atrás" sin tocar ninguna call site.
+  const [isOpen, setOpen] = useModalOpenState({ open, defaultOpen, onOpenChange })
+  return (
+    <AlertDialogPrimitive.Root
+      data-slot="alert-dialog"
+      open={isOpen}
+      onOpenChange={setOpen}
+      {...props}
+    />
+  )
 }
 
 function AlertDialogTrigger({

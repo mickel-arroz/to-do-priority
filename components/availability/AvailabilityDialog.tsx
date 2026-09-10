@@ -193,6 +193,7 @@ export function AvailabilityDialog({
       <DialogContent
         className="sm:max-w-lg"
         showCloseButton={!saving}
+        fullScreenOnMobile
         data-testid="availability-dialog"
       >
         <DialogHeader>
@@ -202,7 +203,7 @@ export function AvailabilityDialog({
 
         <form onSubmit={handleSubmit}>
           <FormFieldset busy={saving}>
-            <div className="max-h-[52dvh] space-y-2 overflow-y-auto py-1 pr-1">
+            <div className="max-h-[52dvh] space-y-2 overflow-y-auto py-1 pr-1 max-sm:max-h-none">
               {loading
                 ? WEEK_ORDER.map((d) => <Skeleton key={d} className="h-[46px] w-full" />)
                 : WEEK_ORDER.map((weekday) => {

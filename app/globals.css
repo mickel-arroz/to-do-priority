@@ -95,6 +95,10 @@
   /* Squarer corners: reduced global radius so components look less rounded.
      The whole rounded-sm/md/lg/xl scale derives from this in @theme. */
   --radius: 0.4rem;
+  /* Alto de la barra inferior móvil. Lo comparten la propia barra, el hueco
+     que le reserva el contenido y el menú desplegable, que se detiene justo
+     encima para no tapar el botón que lo cierra. */
+  --bottom-nav-h: calc(3.5rem + env(safe-area-inset-bottom));
   --on-strong: oklch(0.99 0 0);
   --sidebar: oklch(0.99 0 0);
   --sidebar-foreground: oklch(0.27 0.006 285.885);

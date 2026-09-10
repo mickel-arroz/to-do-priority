@@ -4,11 +4,28 @@ import * as React from "react"
 import { Dialog as SheetPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
+import { useModalOpenState } from "@/hooks/useModalHistory"
 import { Button } from "@/components/ui/button"
 import { XIcon } from "lucide-react"
 
-function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
-  return <SheetPrimitive.Root data-slot="sheet" {...props} />
+function Sheet({
+  open,
+  defaultOpen,
+  onOpenChange,
+  ...props
+}: React.ComponentProps<typeof SheetPrimitive.Root>) {
+  // La apertura se controla siempre desde aquí, también cuando el consumidor
+  // no pasa `onOpenChange`: es lo que permite cerrar la modal desde el botón
+  // "atrás" sin tocar ninguna call site.
+  const [isOpen, setOpen] = useModalOpenState({ open, defaultOpen, onOpenChange })
+  return (
+    <SheetPrimitive.Root
+      data-slot="sheet"
+      open={isOpen}
+      onOpenChange={setOpen}
+      {...props}
+    />
+  )
 }
 
 function SheetTrigger({

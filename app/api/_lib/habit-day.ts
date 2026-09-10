@@ -19,7 +19,7 @@ export async function syncHabitDay(
 ) {
   const { data: linked } = await ctx.supabase
     .from("habit_tasks")
-    .select("tasks!inner(status, due_date, completed_at)")
+    .select("tasks!inner(status, due_date)")
     .eq("habit_id", habitId);
 
   const tasks = (linked ?? []).map(
@@ -47,12 +47,22 @@ export async function syncHabitDay(
     .eq("status", "completed");
 }
 
-/** Recalcula el día para todos los hábitos vinculados a una tarea. */
+/**
+ * Recalcula los días indicados para todos los hábitos vinculados a una tarea.
+ *
+ * Los días llegan del `due_date` de las tareas que han cambiado, no de "hoy":
+ * un día se acredita por lo que vencía en él, así que cerrar tarde una tarea
+ * tiene que repintar el día al que pertenecía. Ver
+ * `docs/adr/0005-habit-day-judged-by-due-date.md`.
+ */
 export async function syncHabitDaysForTask(
   ctx: AuthContext,
   taskId: string,
-  day: string
+  days: string[]
 ) {
+  const unique = [...new Set(days)];
+  if (unique.length === 0) return;
+
   const { data: links } = await ctx.supabase
     .from("habit_tasks")
     .select("habit_id")
@@ -60,6 +70,8 @@ export async function syncHabitDaysForTask(
   if (!links || links.length === 0) return;
 
   for (const { habit_id } of links) {
-    await syncHabitDay(ctx, habit_id, day);
+    for (const day of unique) {
+      await syncHabitDay(ctx, habit_id, day);
+    }
   }
 }
