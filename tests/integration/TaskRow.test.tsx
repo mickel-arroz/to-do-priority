@@ -23,6 +23,48 @@ describe("TaskRow", () => {
     expect(screen.getByText(/Hoy/)).toBeInTheDocument();
   });
 
+  it("shows 'Ayer' for a task due the day before", () => {
+    const task = makeTask({ due_date: "2026-08-13" });
+    renderWithProviders(
+      <TaskRow
+        task={task}
+        today={TODAY}
+        onComplete={vi.fn()}
+        onOpenPomodoro={vi.fn()}
+        onOpenDetail={vi.fn()}
+      />
+    );
+    expect(screen.getByText(/Ayer/)).toBeInTheDocument();
+  });
+
+  it("shows 'Mañana' for a task due the day after", () => {
+    const task = makeTask({ due_date: "2026-08-15" });
+    renderWithProviders(
+      <TaskRow
+        task={task}
+        today={TODAY}
+        onComplete={vi.fn()}
+        onOpenPomodoro={vi.fn()}
+        onOpenDetail={vi.fn()}
+      />
+    );
+    expect(screen.getByText(/Mañana/)).toBeInTheDocument();
+  });
+
+  it("keeps the plain date format for other days", () => {
+    const task = makeTask({ due_date: "2026-08-20" });
+    renderWithProviders(
+      <TaskRow
+        task={task}
+        today={TODAY}
+        onComplete={vi.fn()}
+        onOpenPomodoro={vi.fn()}
+        onOpenDetail={vi.fn()}
+      />
+    );
+    expect(screen.getByText(/20 ago/)).toBeInTheDocument();
+  });
+
   it("marks overdue tasks", () => {
     const task = makeTask({ due_date: "2026-08-01" });
     renderWithProviders(

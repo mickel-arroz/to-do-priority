@@ -117,7 +117,9 @@ export const en = {
     titleRequired: "Title is required",
     dueDateRequired: "Due date is required",
     overdue: "Overdue",
+    yesterday: "Yesterday",
     today: "Today",
+    tomorrow: "Tomorrow",
   },
   pomodoro: {
     title: "Pomodoro timer",

@@ -2,13 +2,11 @@
 
 import { useRef, useState } from "react";
 import { motion, useMotionValue, useTransform } from "motion/react";
-import { format } from "date-fns";
-import { enUS, es as esLocale } from "date-fns/locale";
-import { CalendarDays, Check, Link2, ListChecks, Timer, X } from "@/components/icons";
+import { Check, Link2, ListChecks, Timer, X } from "@/components/icons";
 import { PriorityTag } from "@/components/tasks/PriorityTag";
 import { TaskCompleteCheckbox } from "@/components/tasks/TaskCompleteCheckbox";
+import { TaskDueDate } from "@/components/tasks/TaskDueDate";
 import { priorityClasses } from "@/lib/priority";
-import { parseDate } from "@/lib/recurrence";
 import { useLocale } from "@/lib/i18n/locale-context";
 import type { Task } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -36,7 +34,7 @@ export function TaskRow({
   onOpenPomodoro,
   onOpenDetail,
 }: TaskRowProps) {
-  const { locale, t } = useLocale();
+  const { t } = useLocale();
   const x = useMotionValue(0);
   const [leaving, setLeaving] = useState<"yes" | "no" | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -45,9 +43,6 @@ export function TaskRow({
   const noOpacity = useTransform(x, [-SWIPE_THRESHOLD, 0], [1, 0]);
 
   const p = priorityClasses[task.priority];
-  const isOverdue = task.due_date < today;
-  const isToday = task.due_date === today;
-  const dateLocale = locale === "es" ? esLocale : enUS;
 
   const doneSubtasks = task.subtasks?.filter((s) => s.is_done).length ?? 0;
   const totalSubtasks = task.subtasks?.length ?? 0;
@@ -138,18 +133,7 @@ export function TaskRow({
           <span className="block truncate text-sm font-medium">{task.title}</span>
           <span className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
             <PriorityTag priority={task.priority} />
-            <span
-              className={cn(
-                "flex items-center gap-1",
-                isOverdue && "font-semibold text-failure"
-              )}
-            >
-              <CalendarDays className="size-3.5" />
-              {isToday
-                ? t.tasks.today
-                : format(parseDate(task.due_date), "d MMM", { locale: dateLocale })}
-              {isOverdue && ` · ${t.tasks.overdue}`}
-            </span>
+            <TaskDueDate task={task} today={today} />
             {totalSubtasks > 0 && (
               <span className="flex items-center gap-1">
                 <ListChecks className="size-3.5" />

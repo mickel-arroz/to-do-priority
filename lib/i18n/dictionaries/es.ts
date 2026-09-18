@@ -119,7 +119,9 @@ export const es: Dictionary = {
     titleRequired: "El título es obligatorio",
     dueDateRequired: "La fecha de vencimiento es obligatoria",
     overdue: "Vencida",
+    yesterday: "Ayer",
     today: "Hoy",
+    tomorrow: "Mañana",
   },
   pomodoro: {
     title: "Temporizador Pomodoro",

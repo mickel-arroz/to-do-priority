@@ -1,12 +1,10 @@
 "use client";
 
-import { format } from "date-fns";
-import { enUS, es as esLocale } from "date-fns/locale";
-import { CalendarDays, Link2, ListChecks, Timer } from "@/components/icons";
+import { Link2, ListChecks, Timer } from "@/components/icons";
 import { PriorityTag } from "@/components/tasks/PriorityTag";
 import { TaskCompleteCheckbox } from "@/components/tasks/TaskCompleteCheckbox";
+import { TaskDueDate } from "@/components/tasks/TaskDueDate";
 import { priorityClasses } from "@/lib/priority";
-import { parseDate } from "@/lib/recurrence";
 import { useLocale } from "@/lib/i18n/locale-context";
 import type { Task } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -31,11 +29,8 @@ export function TaskCard({
   onOpenPomodoro,
   onOpenDetail,
 }: TaskCardProps) {
-  const { locale, t } = useLocale();
+  const { t } = useLocale();
   const p = priorityClasses[task.priority];
-  const isOverdue = task.due_date < today;
-  const isToday = task.due_date === today;
-  const dateLocale = locale === "es" ? esLocale : enUS;
 
   const doneSubtasks = task.subtasks?.filter((s) => s.is_done).length ?? 0;
   const totalSubtasks = task.subtasks?.length ?? 0;
@@ -76,18 +71,7 @@ export function TaskCard({
       </button>
 
       <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-        <span
-          className={cn(
-            "flex items-center gap-1",
-            isOverdue && "font-semibold text-failure"
-          )}
-        >
-          <CalendarDays className="size-3.5" />
-          {isToday
-            ? t.tasks.today
-            : format(parseDate(task.due_date), "d MMM", { locale: dateLocale })}
-          {isOverdue && ` · ${t.tasks.overdue}`}
-        </span>
+        <TaskDueDate task={task} today={today} />
         {totalSubtasks > 0 && (
           <span className="flex items-center gap-1">
             <ListChecks className="size-3.5" />

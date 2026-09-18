@@ -1,12 +1,13 @@
 import { render } from "@testing-library/react";
 import { ThemeProvider } from "next-themes";
 import { vi } from "vitest";
+import type { Locale } from "@/lib/i18n";
 import { LocaleProvider } from "@/lib/i18n/locale-context";
 import type { Task } from "@/lib/types";
 
 export function renderWithProviders(
   ui: React.ReactNode,
-  { locale = "es" as const } = {}
+  { locale = "es" }: { locale?: Locale } = {}
 ) {
   return render(
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
