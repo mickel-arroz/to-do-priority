@@ -11,6 +11,9 @@ import { CharCounter } from "@/components/ui/char-counter";
 import { LoadingButton } from "@/components/ui/loading-button";
 import {
   Dialog,
+  DIALOG_COLUMN,
+  DIALOG_COLUMN_PASSTHROUGH,
+  DialogBody,
   DialogContent,
   DialogFooter,
   DialogHeader,
@@ -182,178 +185,180 @@ export function HabitFormDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
-        className="max-h-[90dvh] overflow-y-auto sm:max-w-lg"
+        className="sm:max-h-[90dvh] sm:max-w-lg"
         showCloseButton={!saving}
         fullScreenOnMobile
       >
         <DialogHeader>
           <DialogTitle>{habit ? t.habits.editHabit : t.habits.newHabit}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit}>
-          <FormFieldset busy={saving} className="space-y-4">
-          <div className="space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <Label htmlFor="habit-name">{t.habits.name} *</Label>
-              <CharCounter length={name.length} max={LIMITS.habitName} />
-            </div>
-            <Input
-              id="habit-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              aria-invalid={nameOver}
-              data-testid="habit-name-input"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <Label htmlFor="habit-description">
-                {t.habits.description}{" "}
-                <span className="text-muted-foreground">
-                  ({t.common.optional})
-                </span>
-              </Label>
-              <CharCounter
-                length={description.length}
-                max={LIMITS.habitDescription}
-              />
-            </div>
-            <Textarea
-              id="habit-description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={2}
-              aria-invalid={descriptionOver}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>{t.habits.goalType}</Label>
-            <Tabs value={goalMode} onValueChange={(v) => setGoalMode(v as GoalMode)}>
-              <TabsList className="w-full">
-                <TabsTrigger value="days" className="flex-1" data-testid="goal-days">
-                  {t.habits.goalDays}
-                </TabsTrigger>
-                <TabsTrigger value="date" className="flex-1" data-testid="goal-date">
-                  {t.habits.goalDate}
-                </TabsTrigger>
-                <TabsTrigger
-                  value="indefinite"
-                  className="flex-1"
-                  data-testid="goal-indefinite"
-                >
-                  {t.habits.goalIndefinite}
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-            {goalMode === "days" && (
-              <NumberInput
-                min={1}
-                max={3650}
-                value={targetDays}
-                onChange={setTargetDays}
-                data-testid="target-days-input"
-              />
-            )}
-            {goalMode === "date" && (
-              <Input
-                type="date"
-                min={today}
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                required
-                data-testid="end-date-input"
-              />
-            )}
-          </div>
-
-          <div className="flex items-center justify-between rounded-xl border p-3">
-            <div className="pr-3">
-              <p className="text-sm font-medium">{t.habits.punishment}</p>
-              <p className="text-xs text-muted-foreground">
-                {isIndefinite ? t.habits.punishmentNotAvailable : t.habits.punishmentHint}
-              </p>
-            </div>
-            <Switch
-              checked={!isIndefinite && punishment}
-              onCheckedChange={setPunishment}
-              disabled={isIndefinite}
-              data-testid="punishment-switch"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <Label>{t.habits.linkedTasks} *</Label>
-              {taskIds.size > 0 && (
-                <span className="text-xs text-muted-foreground">
-                  {taskIds.size}
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground">{t.habits.linkedTasksHint}</p>
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={t.common.search}
-              data-testid="task-search-input"
-            />
-            <div
-              ref={listRef}
-              onScroll={handleScroll}
-              className="max-h-44 space-y-1 overflow-y-auto rounded-xl border p-2 max-sm:max-h-none"
-            >
-              {results.length === 0 && !loading && (
-                <p className="px-2 py-3 text-center text-sm text-muted-foreground">
-                  {search ? t.common.noResults : t.home.emptyList}
-                </p>
-              )}
-              {results.map((task) => (
-                <label
-                  key={task.id}
-                  className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-muted"
-                >
-                  <input
-                    type="checkbox"
-                    checked={taskIds.has(task.id)}
-                    onChange={() => toggleTask(task.id)}
-                    className="size-4 accent-primary"
-                    data-testid={`link-task-${task.id}`}
-                  />
-                  <span
-                    className={cn(
-                      "size-2.5 shrink-0 rounded-full",
-                      priorityClasses[task.priority].dot
-                    )}
-                  />
-                  <span className="truncate">{task.title}</span>
-                </label>
-              ))}
-              {loading && (
-                <div
-                  className="flex items-center justify-center py-3"
-                  data-testid="task-search-loading"
-                >
-                  <Loader2 className="size-4 animate-spin text-muted-foreground" />
+        <form onSubmit={handleSubmit} className={DIALOG_COLUMN}>
+          <FormFieldset busy={saving} className={cn("space-y-4", DIALOG_COLUMN_PASSTHROUGH)}>
+            <DialogBody className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <Label htmlFor="habit-name">{t.habits.name} *</Label>
+                  <CharCounter length={name.length} max={LIMITS.habitName} />
                 </div>
-              )}
-            </div>
-          </div>
+                <Input
+                  id="habit-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  aria-invalid={nameOver}
+                  data-testid="habit-name-input"
+                />
+              </div>
 
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              {t.common.cancel}
-            </Button>
-            <LoadingButton
-              type="submit"
-              loading={saving}
-              disabled={!name.trim() || taskIds.size === 0 || hasOverflow}
-              data-testid="habit-save"
-            >
-              {t.common.save}
-            </LoadingButton>
-          </DialogFooter>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <Label htmlFor="habit-description">
+                    {t.habits.description}{" "}
+                    <span className="text-muted-foreground">
+                      ({t.common.optional})
+                    </span>
+                  </Label>
+                  <CharCounter
+                    length={description.length}
+                    max={LIMITS.habitDescription}
+                  />
+                </div>
+                <Textarea
+                  id="habit-description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={2}
+                  aria-invalid={descriptionOver}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>{t.habits.goalType}</Label>
+                <Tabs value={goalMode} onValueChange={(v) => setGoalMode(v as GoalMode)}>
+                  <TabsList className="w-full">
+                    <TabsTrigger value="days" className="flex-1" data-testid="goal-days">
+                      {t.habits.goalDays}
+                    </TabsTrigger>
+                    <TabsTrigger value="date" className="flex-1" data-testid="goal-date">
+                      {t.habits.goalDate}
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="indefinite"
+                      className="flex-1"
+                      data-testid="goal-indefinite"
+                    >
+                      {t.habits.goalIndefinite}
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+                {goalMode === "days" && (
+                  <NumberInput
+                    min={1}
+                    max={3650}
+                    value={targetDays}
+                    onChange={setTargetDays}
+                    data-testid="target-days-input"
+                  />
+                )}
+                {goalMode === "date" && (
+                  <Input
+                    type="date"
+                    min={today}
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    required
+                    data-testid="end-date-input"
+                  />
+                )}
+              </div>
+
+              <div className="flex items-center justify-between rounded-xl border p-3">
+                <div className="pr-3">
+                  <p className="text-sm font-medium">{t.habits.punishment}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {isIndefinite ? t.habits.punishmentNotAvailable : t.habits.punishmentHint}
+                  </p>
+                </div>
+                <Switch
+                  checked={!isIndefinite && punishment}
+                  onCheckedChange={setPunishment}
+                  disabled={isIndefinite}
+                  data-testid="punishment-switch"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <Label>{t.habits.linkedTasks} *</Label>
+                  {taskIds.size > 0 && (
+                    <span className="text-xs text-muted-foreground">
+                      {taskIds.size}
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">{t.habits.linkedTasksHint}</p>
+                <Input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder={t.common.search}
+                  data-testid="task-search-input"
+                />
+                <div
+                  ref={listRef}
+                  onScroll={handleScroll}
+                  className="max-h-44 space-y-1 overflow-y-auto rounded-xl border p-2 max-sm:max-h-none"
+                >
+                  {results.length === 0 && !loading && (
+                    <p className="px-2 py-3 text-center text-sm text-muted-foreground">
+                      {search ? t.common.noResults : t.home.emptyList}
+                    </p>
+                  )}
+                  {results.map((task) => (
+                    <label
+                      key={task.id}
+                      className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-muted"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={taskIds.has(task.id)}
+                        onChange={() => toggleTask(task.id)}
+                        className="size-4 accent-primary"
+                        data-testid={`link-task-${task.id}`}
+                      />
+                      <span
+                        className={cn(
+                          "size-2.5 shrink-0 rounded-full",
+                          priorityClasses[task.priority].dot
+                        )}
+                      />
+                      <span className="truncate">{task.title}</span>
+                    </label>
+                  ))}
+                  {loading && (
+                    <div
+                      className="flex items-center justify-center py-3"
+                      data-testid="task-search-loading"
+                    >
+                      <Loader2 className="size-4 animate-spin text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </DialogBody>
+
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+                {t.common.cancel}
+              </Button>
+              <LoadingButton
+                type="submit"
+                loading={saving}
+                disabled={!name.trim() || taskIds.size === 0 || hasOverflow}
+                data-testid="habit-save"
+              >
+                {t.common.save}
+              </LoadingButton>
+            </DialogFooter>
           </FormFieldset>
         </form>
       </DialogContent>

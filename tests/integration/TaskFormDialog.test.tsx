@@ -117,3 +117,43 @@ describe("TaskFormDialog: límite de subtareas", () => {
     expect(screen.getByTestId("task-save")).toBeDisabled();
   });
 });
+
+describe("TaskFormDialog: pantalla completa en móvil", () => {
+  const content = () =>
+    document.querySelector<HTMLElement>('[data-slot="dialog-content"]')!;
+  const body = () =>
+    document.querySelector<HTMLElement>('[data-slot="dialog-body"]')!;
+
+  it("deja la cabecera, el pie y el cerrar fuera del cuerpo que scrollea", () => {
+    open();
+
+    // Lo que scrollea es el cuerpo: los campos están dentro...
+    expect(body()).toBeInTheDocument();
+    expect(body()).toContainElement(screen.getByTestId("task-title-input"));
+
+    // ...y la cabecera, el pie y el botón de cerrar, fuera, para que no se
+    // vayan de la pantalla al scrollear.
+    expect(body()).not.toContainElement(
+      document.querySelector<HTMLElement>('[data-slot="dialog-header"]')
+    );
+    expect(body()).not.toContainElement(screen.getByTestId("task-save"));
+    expect(body()).not.toContainElement(
+      screen.getByRole("button", { name: "Close" })
+    );
+  });
+
+  // jsdom no aplica CSS, así que esto no mide el scroll: es un canario sobre
+  // las clases. Lo que se ve de verdad lo mide el e2e "only the body scrolls"
+  // de `tests/e2e/mobile.spec.ts`, que compara cajas en un viewport móvil.
+  it("deja el scroll en el cuerpo y la pantalla completa sin recortar", () => {
+    open();
+
+    expect(content().className).toContain("overflow-hidden");
+    expect(content().className).not.toContain("overflow-y-auto");
+    expect(body().className).toContain("overflow-y-auto");
+
+    // Un `max-h-[90dvh]` sin prefijo ganaría al `h-dvh` de pantalla completa
+    // y dejaría el pie flotando a un 10% del borde inferior.
+    expect(content().className).not.toMatch(/(^|\s)max-h-\[90dvh\]/);
+  });
+});

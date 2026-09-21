@@ -74,3 +74,48 @@ test.describe("mobile navigation", () => {
     expect(page.url()).toBe(url);
   });
 });
+
+test.describe("full-screen dialogs", () => {
+  test("only the body scrolls: header, footer and close stay put", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await page.getByTestId("new-task").click();
+
+    const body = page.locator('[data-slot="dialog-body"]');
+    const fixed = [
+      page.locator('[data-slot="dialog-header"]'),
+      page.locator('[data-slot="dialog-footer"]'),
+      page.getByRole("button", { name: "Close" }),
+    ];
+    await expect(body).toBeVisible();
+
+    const boxes = async () =>
+      Promise.all(
+        fixed.map(async (l) => {
+          const b = (await l.boundingBox())!;
+          return [Math.round(b.x), Math.round(b.y), Math.round(b.height)];
+        })
+      );
+    const before = await boxes();
+
+    // El formulario es más alto que la pantalla, así que hay scroll de sobra.
+    await body.evaluate((el) => el.scrollTo(0, el.scrollHeight));
+    await expect
+      .poll(() => body.evaluate((el) => el.scrollTop))
+      .toBeGreaterThan(0);
+
+    expect(await boxes()).toEqual(before);
+
+    // Y el Content entero no scrollea: es lo que se llevaba todo por delante.
+    const content = page.locator('[data-slot="dialog-content"]');
+    expect(
+      await content.evaluate((el) => el.scrollHeight - el.clientHeight)
+    ).toBe(0);
+
+    // El pie muere pegado al borde inferior de la pantalla.
+    const footer = (await fixed[1].boundingBox())!;
+    const viewport = page.viewportSize()!;
+    expect(Math.abs(footer.y + footer.height - viewport.height)).toBeLessThan(2);
+  });
+});

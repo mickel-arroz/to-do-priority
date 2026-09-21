@@ -7,8 +7,12 @@ import { Button } from "@/components/ui/button";
 import { FormFieldset, useLockedOpenChange } from "@/components/ui/busy";
 import {
   Dialog,
+  DIALOG_COLUMN,
+  DIALOG_COLUMN_PASSTHROUGH,
+  DialogBody,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -191,7 +195,7 @@ export function AvailabilityDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
-        className="sm:max-w-lg"
+        className="sm:max-h-[90dvh] sm:max-w-lg"
         showCloseButton={!saving}
         fullScreenOnMobile
         data-testid="availability-dialog"
@@ -201,9 +205,9 @@ export function AvailabilityDialog({
           <DialogDescription>{t.availability.description}</DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit}>
-          <FormFieldset busy={saving}>
-            <div className="max-h-[52dvh] space-y-2 overflow-y-auto py-1 pr-1 max-sm:max-h-none">
+        <form onSubmit={handleSubmit} className={DIALOG_COLUMN}>
+          <FormFieldset busy={saving} className={DIALOG_COLUMN_PASSTHROUGH}>
+            <DialogBody className="max-h-[52dvh] space-y-2 overflow-y-auto py-1 pr-1 max-sm:max-h-none">
               {loading
                 ? WEEK_ORDER.map((d) => <Skeleton key={d} className="h-[46px] w-full" />)
                 : WEEK_ORDER.map((weekday) => {
@@ -320,11 +324,13 @@ export function AvailabilityDialog({
                       </div>
                     );
                   })}
-            </div>
+            </DialogBody>
 
-            {/* Footer propio: "Restablecer" va a la izquierda y "Guardar" a la
-                derecha, y DialogFooter alinea todo al final. */}
-            <div className="-mx-4 -mb-4 mt-4 flex items-center justify-between gap-2 rounded-b-xl border-t bg-muted p-4">
+            {/* "Restablecer" va a la izquierda y "Guardar" a la derecha, en vez
+                del apilado al final que trae DialogFooter. Al quedarse en fila
+                también en móvil, los botones se reparten el ancho en vez de
+                pedir el 100% cada uno, que se salía de la pantalla. */}
+            <DialogFooter className="mt-4 flex-row items-center justify-between sm:justify-between max-sm:[&_button]:w-auto max-sm:[&_button]:flex-1">
               <Button
                 type="button"
                 variant="outline"
@@ -344,7 +350,7 @@ export function AvailabilityDialog({
               >
                 {t.common.save}
               </LoadingButton>
-            </div>
+            </DialogFooter>
           </FormFieldset>
         </form>
       </DialogContent>

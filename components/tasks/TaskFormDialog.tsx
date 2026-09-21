@@ -20,6 +20,9 @@ import { FormFieldset, useLockedOpenChange } from "@/components/ui/busy";
 import { LoadingButton } from "@/components/ui/loading-button";
 import {
   Dialog,
+  DIALOG_COLUMN,
+  DIALOG_COLUMN_PASSTHROUGH,
+  DialogBody,
   DialogContent,
   DialogFooter,
   DialogHeader,
@@ -329,358 +332,362 @@ export function TaskFormDialog({
   return (
     <Dialog open={open} onOpenChange={closeAndSync}>
       <DialogContent
-        className="max-h-[90dvh] overflow-y-auto sm:max-w-3xl"
+        className="sm:max-h-[90dvh] sm:max-w-3xl"
         showCloseButton={!busy}
         fullScreenOnMobile
       >
         <DialogHeader>
           <DialogTitle>{task ? t.tasks.editTask : t.tasks.newTask}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit}>
-          <FormFieldset busy={busy} className="space-y-4">
-          <div className="space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <Label htmlFor="task-title">{t.tasks.title} *</Label>
-              <CharCounter length={title.length} max={LIMITS.taskTitle} />
-            </div>
-            <Input
-              id="task-title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              required
-              aria-invalid={titleOver}
-              data-testid="task-title-input"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <Label htmlFor="task-description">
-                {t.tasks.description}{" "}
-                <span className="text-muted-foreground">
-                  ({t.common.optional})
-                </span>
-              </Label>
-              <CharCounter
-                length={description.length}
-                max={LIMITS.taskDescription}
-              />
-            </div>
-            <Textarea
-              id="task-description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={2}
-              aria-invalid={descriptionOver}
-            />
-          </div>
-
-          {/* Two-column layout on desktop, stacked on mobile */}
-          <div className="grid gap-x-6 gap-y-4 md:grid-cols-2">
-            {/* Left column: core attributes */}
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label>{t.tasks.category}</Label>
-                  <Select value={categoryId} onValueChange={setCategoryId}>
-                    <SelectTrigger
-                      data-testid="task-category-select"
-                      className="w-full"
-                    >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.is_default ? t.categories.general : c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+        <form onSubmit={handleSubmit} className={DIALOG_COLUMN}>
+          <FormFieldset busy={busy} className={cn("space-y-4", DIALOG_COLUMN_PASSTHROUGH)}>
+            <DialogBody className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <Label htmlFor="task-title">{t.tasks.title} *</Label>
+                  <CharCounter length={title.length} max={LIMITS.taskTitle} />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="task-due">{t.tasks.dueDate} *</Label>
-                  <Input
-                    id="task-due"
-                    type="date"
-                    value={dueDate}
-                    onChange={(e) => setDueDate(e.target.value)}
-                    required
-                    data-testid="task-due-input"
+                <Input
+                  id="task-title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  required
+                  aria-invalid={titleOver}
+                  data-testid="task-title-input"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <Label htmlFor="task-description">
+                    {t.tasks.description}{" "}
+                    <span className="text-muted-foreground">
+                      ({t.common.optional})
+                    </span>
+                  </Label>
+                  <CharCounter
+                    length={description.length}
+                    max={LIMITS.taskDescription}
                   />
                 </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="task-link">
-                  {t.tasks.link}{" "}
-                  <span className="text-muted-foreground">
-                    ({t.common.optional})
-                  </span>
-                </Label>
-                <Input
-                  id="task-link"
-                  type="url"
-                  placeholder="https://"
-                  value={link}
-                  onChange={(e) => setLink(e.target.value)}
+                <Textarea
+                  id="task-description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={2}
+                  aria-invalid={descriptionOver}
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label>{t.tasks.recurrence}</Label>
-                <RecurrencePicker value={recurrence} onChange={setRecurrence} />
-              </div>
-            </div>
-
-            {/* Right column: priority & productivity */}
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>{t.tasks.priority}</Label>
-                <PrioritySelect value={priority} onChange={setPriority} />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="task-pomodoro">{t.tasks.pomodoro}</Label>
-                <NumberInput
-                  id="task-pomodoro"
-                  min={0}
-                  max={180}
-                  placeholder="0"
-                  value={pomodoro}
-                  onChange={setPomodoro}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-2 border-t pt-4">
-            <Label htmlFor="task-subtask">{t.tasks.subtasks}</Label>
-            {task
-              ? existingSubtasks.length > 0 && (
-                  <ul className="space-y-1">
-                    {existingSubtasks.map((st) => {
-                      const editing = editingSubtaskId === st.id;
-                      const rowBusy = rowBusyId === st.id;
-                      return (
-                        <li
-                          key={st.id}
-                          className="rounded-lg bg-muted px-3 py-2.5 text-sm"
+              {/* Two-column layout on desktop, stacked on mobile */}
+              <div className="grid gap-x-6 gap-y-4 md:grid-cols-2">
+                {/* Left column: core attributes */}
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label>{t.tasks.category}</Label>
+                      <Select value={categoryId} onValueChange={setCategoryId}>
+                        <SelectTrigger
+                          data-testid="task-category-select"
+                          className="w-full"
                         >
-                          {editing && (
-                            <div className="flex items-center justify-end pb-1">
-                              <CharCounter
-                                length={editingSubtaskValue.length}
-                                max={LIMITS.subtaskTitle}
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {categories.map((c) => (
+                            <SelectItem key={c.id} value={c.id}>
+                              {c.is_default ? t.categories.general : c.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="task-due">{t.tasks.dueDate} *</Label>
+                      <Input
+                        id="task-due"
+                        type="date"
+                        value={dueDate}
+                        onChange={(e) => setDueDate(e.target.value)}
+                        required
+                        data-testid="task-due-input"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="task-link">
+                      {t.tasks.link}{" "}
+                      <span className="text-muted-foreground">
+                        ({t.common.optional})
+                      </span>
+                    </Label>
+                    <Input
+                      id="task-link"
+                      type="url"
+                      placeholder="https://"
+                      value={link}
+                      onChange={(e) => setLink(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>{t.tasks.recurrence}</Label>
+                    <RecurrencePicker value={recurrence} onChange={setRecurrence} />
+                  </div>
+                </div>
+
+                {/* Right column: priority & productivity */}
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>{t.tasks.priority}</Label>
+                    <PrioritySelect value={priority} onChange={setPriority} />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="task-pomodoro">{t.tasks.pomodoro}</Label>
+                    <NumberInput
+                      id="task-pomodoro"
+                      min={0}
+                      max={180}
+                      placeholder="0"
+                      value={pomodoro}
+                      onChange={setPomodoro}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2 border-t pt-4">
+                <Label htmlFor="task-subtask">{t.tasks.subtasks}</Label>
+                {task
+                  ? existingSubtasks.length > 0 && (
+                      <ul className="space-y-1">
+                        {existingSubtasks.map((st) => {
+                          const editing = editingSubtaskId === st.id;
+                          const rowBusy = rowBusyId === st.id;
+                          return (
+                            <li
+                              key={st.id}
+                              className="rounded-lg bg-muted px-3 py-2.5 text-sm"
+                            >
+                              {editing && (
+                                <div className="flex items-center justify-end pb-1">
+                                  <CharCounter
+                                    length={editingSubtaskValue.length}
+                                    max={LIMITS.subtaskTitle}
+                                  />
+                                </div>
+                              )}
+                              <div className="flex items-start gap-3">
+                              <input
+                                type="checkbox"
+                                checked={st.is_done}
+                                disabled={rowBusy}
+                                onChange={() => toggleExistingSubtask(st)}
+                                aria-label={st.title}
+                                className="mt-0.5 size-5 shrink-0 accent-primary"
                               />
-                            </div>
-                          )}
-                          <div className="flex items-start gap-3">
-                          <input
-                            type="checkbox"
-                            checked={st.is_done}
-                            disabled={rowBusy}
-                            onChange={() => toggleExistingSubtask(st)}
-                            aria-label={st.title}
-                            className="mt-0.5 size-5 shrink-0 accent-primary"
-                          />
-                          {editing ? (
-                            <Input
-                              autoFocus
-                              value={editingSubtaskValue}
-                              aria-invalid={
-                                editingSubtaskValue.length > LIMITS.subtaskTitle
-                              }
-                              onChange={(e) =>
-                                setEditingSubtaskValue(e.target.value)
-                              }
-                              onBlur={() => commitExistingEdit(st)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  e.preventDefault();
-                                  commitExistingEdit(st);
-                                } else if (e.key === "Escape") {
-                                  setEditingSubtaskId(null);
-                                  setEditingSubtaskValue("");
-                                }
-                              }}
-                              className="h-8"
-                            />
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => startExistingEdit(st)}
-                              className={cn(
-                                "min-w-0 flex-1 whitespace-normal break-words text-left",
-                                st.is_done &&
-                                  "text-muted-foreground line-through"
+                              {editing ? (
+                                <Input
+                                  autoFocus
+                                  value={editingSubtaskValue}
+                                  aria-invalid={
+                                    editingSubtaskValue.length > LIMITS.subtaskTitle
+                                  }
+                                  onChange={(e) =>
+                                    setEditingSubtaskValue(e.target.value)
+                                  }
+                                  onBlur={() => commitExistingEdit(st)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                      e.preventDefault();
+                                      commitExistingEdit(st);
+                                    } else if (e.key === "Escape") {
+                                      setEditingSubtaskId(null);
+                                      setEditingSubtaskValue("");
+                                    }
+                                  }}
+                                  className="h-8"
+                                />
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => startExistingEdit(st)}
+                                  className={cn(
+                                    "min-w-0 flex-1 whitespace-normal break-words text-left",
+                                    st.is_done &&
+                                      "text-muted-foreground line-through"
+                                  )}
+                                  title={t.common.edit}
+                                >
+                                  {st.title}
+                                </button>
                               )}
-                              title={t.common.edit}
-                            >
-                              {st.title}
-                            </button>
-                          )}
-                          {!editing && (
-                            <button
-                              type="button"
-                              aria-label={t.common.delete}
-                              className="-my-1 -mr-1 shrink-0 p-1"
-                              disabled={rowBusy}
-                              onClick={() => removeExistingSubtask(st)}
-                            >
-                              <X className="size-5 text-muted-foreground" />
-                            </button>
-                          )}
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )
-              : newSubtasks.length > 0 && (
-                  <ul className="space-y-1">
-                    {newSubtasks.map((s, i) => {
-                      const editing = editingIndex === i;
-                      return (
-                        <li
-                          key={i}
-                          className="flex items-start gap-2 rounded-lg bg-muted px-3 py-1.5 text-sm"
-                        >
-                          {editing ? (
-                            <Input
-                              autoFocus
-                              value={editingValue}
-                              aria-invalid={
-                                editingValue.length > LIMITS.subtaskTitle
-                              }
-                              onChange={(e) => setEditingValue(e.target.value)}
-                              onBlur={commitEdit}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  e.preventDefault();
-                                  commitEdit();
-                                } else if (e.key === "Escape") {
-                                  setEditingIndex(null);
-                                  setEditingValue("");
-                                }
-                              }}
-                              className="h-7"
-                              data-testid={`subtask-edit-${i}`}
-                            />
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => startEdit(i)}
-                              className={cn(
-                                "min-w-0 flex-1 whitespace-normal break-words text-left",
-                                s.length > LIMITS.subtaskTitle && "text-failure"
+                              {!editing && (
+                                <button
+                                  type="button"
+                                  aria-label={t.common.delete}
+                                  className="-my-1 -mr-1 shrink-0 p-1"
+                                  disabled={rowBusy}
+                                  onClick={() => removeExistingSubtask(st)}
+                                >
+                                  <X className="size-5 text-muted-foreground" />
+                                </button>
                               )}
-                              title={t.common.edit}
+                              </div>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )
+                  : newSubtasks.length > 0 && (
+                      <ul className="space-y-1">
+                        {newSubtasks.map((s, i) => {
+                          const editing = editingIndex === i;
+                          return (
+                            <li
+                              key={i}
+                              className="flex items-start gap-2 rounded-lg bg-muted px-3 py-1.5 text-sm"
                             >
-                              {s}
-                            </button>
-                          )}
-                          {!editing && (
-                            <button
-                              type="button"
-                              aria-label={t.common.delete}
-                              className="mt-0.5 shrink-0"
-                              onClick={() =>
-                                setNewSubtasks((prev) =>
-                                  prev.filter((_, j) => j !== i)
-                                )
-                              }
-                            >
-                              <X className="size-4 text-muted-foreground" />
-                            </button>
-                          )}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-            <div className="flex items-center justify-end">
-              <CharCounter
-                length={subtaskDraft.length}
-                max={LIMITS.subtaskTitle}
-              />
-            </div>
-            <div className="flex gap-2">
-              <Input
-                id="task-subtask"
-                value={subtaskDraft}
-                onChange={(e) => setSubtaskDraft(e.target.value)}
-                placeholder={t.tasks.addSubtask}
-                aria-invalid={subtaskDraftOver}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    if (task) addExistingSubtask();
-                    else addSubtask();
-                  }
-                }}
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={task ? addExistingSubtask : addSubtask}
-                disabled={
-                  !subtaskDraft.trim() ||
-                  subtaskDraftOver ||
-                  rowBusyId === "new"
-                }
-              >
-                <Plus className="size-4" />
-              </Button>
-            </div>
-          </div>
-
-          <DialogFooter>
-            {task && (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
+                              {editing ? (
+                                <Input
+                                  autoFocus
+                                  value={editingValue}
+                                  aria-invalid={
+                                    editingValue.length > LIMITS.subtaskTitle
+                                  }
+                                  onChange={(e) => setEditingValue(e.target.value)}
+                                  onBlur={commitEdit}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                      e.preventDefault();
+                                      commitEdit();
+                                    } else if (e.key === "Escape") {
+                                      setEditingIndex(null);
+                                      setEditingValue("");
+                                    }
+                                  }}
+                                  className="h-7"
+                                  data-testid={`subtask-edit-${i}`}
+                                />
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => startEdit(i)}
+                                  className={cn(
+                                    "min-w-0 flex-1 whitespace-normal break-words text-left",
+                                    s.length > LIMITS.subtaskTitle && "text-failure"
+                                  )}
+                                  title={t.common.edit}
+                                >
+                                  {s}
+                                </button>
+                              )}
+                              {!editing && (
+                                <button
+                                  type="button"
+                                  aria-label={t.common.delete}
+                                  className="mt-0.5 shrink-0"
+                                  onClick={() =>
+                                    setNewSubtasks((prev) =>
+                                      prev.filter((_, j) => j !== i)
+                                    )
+                                  }
+                                >
+                                  <X className="size-4 text-muted-foreground" />
+                                </button>
+                              )}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                <div className="flex items-center justify-end">
+                  <CharCounter
+                    length={subtaskDraft.length}
+                    max={LIMITS.subtaskTitle}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    id="task-subtask"
+                    value={subtaskDraft}
+                    onChange={(e) => setSubtaskDraft(e.target.value)}
+                    placeholder={t.tasks.addSubtask}
+                    aria-invalid={subtaskDraftOver}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        if (task) addExistingSubtask();
+                        else addSubtask();
+                      }
+                    }}
+                  />
                   <Button
                     type="button"
-                    variant="ghost"
-                    className="mr-auto text-destructive hover:text-destructive"
-                    data-testid="task-delete"
+                    variant="outline"
+                    size="icon"
+                    onClick={task ? addExistingSubtask : addSubtask}
+                    disabled={
+                      !subtaskDraft.trim() ||
+                      subtaskDraftOver ||
+                      rowBusyId === "new"
+                    }
                   >
-                    <Trash2 className="size-4" />
-                    {t.tasks.deleteTask}
+                    <Plus className="size-4" />
                   </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>{t.tasks.deleteTask}</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      {t.tasks.deleteTaskConfirm}
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={handleDelete}
-                      disabled={deleting}
+                </div>
+              </div>
+            </DialogBody>
+
+            {/* En móvil sin invertir: eliminar es lo primero de la columna, no lo
+                último debajo de guardar y cancelar. */}
+            <DialogFooter className="max-sm:flex-col">
+              {task && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="mr-auto text-destructive hover:text-destructive"
+                      data-testid="task-delete"
                     >
-                      {t.common.delete}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            )}
-            <Button type="button" variant="ghost" onClick={() => closeAndSync(false)}>
-              {t.common.cancel}
-            </Button>
-            <LoadingButton
-              type="submit"
-              loading={saving}
-              disabled={!title.trim() || hasOverflow}
-              data-testid="task-save"
-            >
-              {t.common.save}
-            </LoadingButton>
-          </DialogFooter>
+                      <Trash2 className="size-4" />
+                      {t.tasks.deleteTask}
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>{t.tasks.deleteTask}</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        {t.tasks.deleteTaskConfirm}
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleDelete}
+                        disabled={deleting}
+                      >
+                        {t.common.delete}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+              <Button type="button" variant="ghost" onClick={() => closeAndSync(false)}>
+                {t.common.cancel}
+              </Button>
+              <LoadingButton
+                type="submit"
+                loading={saving}
+                disabled={!title.trim() || hasOverflow}
+                data-testid="task-save"
+              >
+                {t.common.save}
+              </LoadingButton>
+            </DialogFooter>
           </FormFieldset>
         </form>
       </DialogContent>

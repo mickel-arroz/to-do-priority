@@ -11,6 +11,9 @@ import { CharCounter } from "@/components/ui/char-counter";
 import { LoadingButton } from "@/components/ui/loading-button";
 import {
   Dialog,
+  DIALOG_COLUMN,
+  DIALOG_COLUMN_PASSTHROUGH,
+  DialogBody,
   DialogContent,
   DialogFooter,
   DialogHeader,
@@ -95,7 +98,7 @@ export function CategoryFormDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
-        className="sm:max-w-sm"
+        className="sm:max-h-[90dvh] sm:max-w-sm"
         showCloseButton={!saving}
         fullScreenOnMobile
       >
@@ -104,84 +107,86 @@ export function CategoryFormDialog({
             {category ? t.categories.editCategory : t.categories.newCategory}
           </DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit}>
-          <FormFieldset busy={saving} className="space-y-4">
-          <div className="space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <Label htmlFor="category-name">{t.categories.name}</Label>
-              <CharCounter length={name.length} max={LIMITS.categoryName} />
-            </div>
-            <Input
-              id="category-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              autoFocus={!coarsePointer}
-              aria-invalid={nameOver}
-              data-testid="category-name-input"
-            />
-          </div>
-
-          {!isDefaultList && (
-            <div className="space-y-2">
-              <Label>{t.categories.icon}</Label>
-              <div className="grid grid-cols-7 gap-1.5">
-                {Object.entries(SELECTABLE_CATEGORY_ICONS).map(([key, Icon]) => (
-                  <button
-                    key={key}
-                    type="button"
-                    aria-pressed={icon === key}
-                    onClick={() => setIcon(key)}
-                    data-testid={`icon-${key}`}
-                    className={cn(
-                      "flex aspect-square items-center justify-center rounded-md border transition-colors",
-                      icon === key
-                        ? "border-primary bg-accent text-primary"
-                        : "border-transparent text-muted-foreground hover:bg-muted"
-                    )}
-                  >
-                    <Icon className="size-4" />
-                  </button>
-                ))}
+        <form onSubmit={handleSubmit} className={DIALOG_COLUMN}>
+          <FormFieldset busy={saving} className={cn("space-y-4", DIALOG_COLUMN_PASSTHROUGH)}>
+            <DialogBody className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <Label htmlFor="category-name">{t.categories.name}</Label>
+                  <CharCounter length={name.length} max={LIMITS.categoryName} />
+                </div>
+                <Input
+                  id="category-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  autoFocus={!coarsePointer}
+                  aria-invalid={nameOver}
+                  data-testid="category-name-input"
+                />
               </div>
-            </div>
-          )}
 
-          <div className="space-y-2">
-            <Label>{t.categories.color}</Label>
-            <div className="flex flex-wrap gap-1.5">
-              {CATEGORY_COLORS.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  aria-pressed={color === c}
-                  onClick={() => setColor(color === c ? null : c)}
-                  data-testid={`color-${c.slice(1)}`}
-                  className="flex size-7 items-center justify-center rounded-md border border-foreground/10 transition-transform hover:scale-110"
-                  style={{ backgroundColor: c }}
-                >
-                  {color === c && <Check className="size-4 text-on-strong" />}
-                </button>
-              ))}
-            </div>
-          </div>
+              {!isDefaultList && (
+                <div className="space-y-2">
+                  <Label>{t.categories.icon}</Label>
+                  <div className="grid grid-cols-7 gap-1.5">
+                    {Object.entries(SELECTABLE_CATEGORY_ICONS).map(([key, Icon]) => (
+                      <button
+                        key={key}
+                        type="button"
+                        aria-pressed={icon === key}
+                        onClick={() => setIcon(key)}
+                        data-testid={`icon-${key}`}
+                        className={cn(
+                          "flex aspect-square items-center justify-center rounded-md border transition-colors",
+                          icon === key
+                            ? "border-primary bg-accent text-primary"
+                            : "border-transparent text-muted-foreground hover:bg-muted"
+                        )}
+                      >
+                        <Icon className="size-4" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => onOpenChange(false)}
-            >
-              {t.common.cancel}
-            </Button>
-            <LoadingButton
-              type="submit"
-              loading={saving}
-              disabled={!name.trim() || nameOver}
-              data-testid="category-save"
-            >
-              {t.common.save}
-            </LoadingButton>
-          </DialogFooter>
+              <div className="space-y-2">
+                <Label>{t.categories.color}</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  {CATEGORY_COLORS.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      aria-pressed={color === c}
+                      onClick={() => setColor(color === c ? null : c)}
+                      data-testid={`color-${c.slice(1)}`}
+                      className="flex size-7 items-center justify-center rounded-md border border-foreground/10 transition-transform hover:scale-110"
+                      style={{ backgroundColor: c }}
+                    >
+                      {color === c && <Check className="size-4 text-on-strong" />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </DialogBody>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => onOpenChange(false)}
+              >
+                {t.common.cancel}
+              </Button>
+              <LoadingButton
+                type="submit"
+                loading={saving}
+                disabled={!name.trim() || nameOver}
+                data-testid="category-save"
+              >
+                {t.common.save}
+              </LoadingButton>
+            </DialogFooter>
           </FormFieldset>
         </form>
       </DialogContent>
