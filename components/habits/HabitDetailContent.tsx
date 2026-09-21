@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, ShieldAlert, Trash2 } from "@/components/icons";
 import { toast } from "sonner";
@@ -35,7 +35,7 @@ import { cn } from "@/lib/utils";
 
 type HabitDetailContentProps = {
   habit: Habit;
-  initialLogs: HabitLog[];
+  logs: HabitLog[];
   /**
    * Todas las tareas vinculadas, con cada instancia recurrente: sus
    * `due_date` dicen qué días pedían algo. La lista visible se deduplica.
@@ -51,7 +51,7 @@ type HabitDetailContentProps = {
 
 export function HabitDetailContent({
   habit,
-  initialLogs,
+  logs,
   linkedTasks,
   allTasks,
   today,
@@ -60,19 +60,9 @@ export function HabitDetailContent({
 }: HabitDetailContentProps) {
   const t = useT();
   const router = useRouter();
-  const [logs, setLogs] = useState(initialLogs);
   const [editOpen, setEditOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
-
-  // Backfill 'missed' days so the calendar shows them; progress math
-  // derives everything from raw logs regardless
-  useEffect(() => {
-    api.habits
-      .syncMissed(habit.id)
-      .then(({ logs: synced }) => setLogs(synced))
-      .catch(() => {});
-  }, [habit.id]);
 
   const progress = computeHabitProgress(habit, logs, linkedTasks, today);
   const shownTasks = dedupeRecurrenceSeries(linkedTasks);

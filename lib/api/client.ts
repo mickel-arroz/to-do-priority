@@ -214,9 +214,5 @@ export const api = {
       }),
     remove: (id: string) =>
       request<{ ok: true }>(`/api/habits/${id}`, { method: "DELETE" }),
-    syncMissed: (id: string) =>
-      request<{ logs: HabitLog[] }>(`/api/habits/${id}/logs`, {
-        method: "POST",
-      }),
   },
 };

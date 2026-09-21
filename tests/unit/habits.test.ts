@@ -23,8 +23,8 @@ function habit(partial: Partial<Habit>): Habit {
   };
 }
 
-function log(date: string, status: "completed" | "missed" = "completed"): HabitLog {
-  return { id: date, habit_id: "h1", log_date: date, status };
+function log(date: string): HabitLog {
+  return { id: date, habit_id: "h1", log_date: date, status: "completed" };
 }
 
 const TODAY = "2026-08-14";
@@ -170,6 +170,20 @@ describe("buildCalendarData", () => {
     expect(byDate["2026-08-12"]).toBe("completed");
     expect(byDate["2026-08-14"]).toBe("today-pending");
     expect(byDate["2026-08-20"]).toBe("future");
+  });
+});
+
+describe("filas 'missed' anteriores a la migración 0010", () => {
+  it("no acreditan el día ni en el progreso ni en el calendario", () => {
+    // El tipo ya no admite 'missed'; una base sin migrar aún puede devolverlo.
+    const stale = { ...log("2026-08-11"), status: "missed" as HabitLog["status"] };
+    const h = habit({ start_date: "2026-08-10" });
+    const p = computeHabitProgress(h, [log("2026-08-10"), stale], DAILY, TODAY);
+    expect(p.completedDays).toBe(1);
+    expect(p.missedDays).toBe(3);
+
+    const days = buildCalendarData(h, [stale], DAILY, TODAY, 2026, 7);
+    expect(days.find((d) => d.date === "2026-08-11")?.status).toBe("missed");
   });
 });
 

@@ -56,7 +56,6 @@ describe("syncHabitDay", () => {
     const write = ops.find((o) => o.table === "habit_logs");
     expect(write?.action).toBe("delete");
     expect(eqOf(write!, "log_date")).toBe(DAY);
-    expect(eqOf(write!, "status")).toBe("completed");
   });
 
   it("retira la acreditación de un día que ya no tiene tareas", async () => {

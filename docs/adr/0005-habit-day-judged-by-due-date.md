@@ -31,9 +31,9 @@ El día acreditado deja de depender de la zona horaria de quien cierra la tarea
 lo que refuerza el ADR 0003 en vez de contradecirlo: el `due_date` ya se eligió
 en el día del usuario cuando se creó la tarea.
 
-Un día pasado puede cambiar de fallado a cumplido mucho después. El `upsert` de
-`habit_logs` con `onConflict: "habit_id,log_date"` sobrescribe el `missed` que el
-backfill hubiera puesto, así que el calendario se repinta solo.
+Un día pasado puede cambiar de fallado a cumplido mucho después. Como el
+calendario deriva el fallo de las tareas y no de ninguna fila guardada (ADR
+0009), basta con escribir la acreditación para que se repinte solo.
 
 Toda mutación que cambie qué tareas vencen un día de un hábito tiene que
 pasar por `syncHabitDays` con los días que abandona y los que estrena: mover el

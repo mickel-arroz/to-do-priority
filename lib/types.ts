@@ -1,7 +1,12 @@
 import type { RecurrenceType } from "@/lib/recurrence";
 
 export type TaskStatus = "pending" | "yes" | "no";
-export type HabitLogStatus = "completed" | "missed";
+/**
+ * Un log de hábito sólo existe para acreditar un día. Los días fallados y los
+ * neutros no se guardan: se derivan en lectura de las tareas vinculadas
+ * (`docs/adr/0009-habit-logs-only-record-accredited-days.md`).
+ */
+export type HabitLogStatus = "completed";
 export type Priority = 1 | 2 | 3 | 4;
 
 export type Category = {

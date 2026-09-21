@@ -43,7 +43,7 @@ export default async function HabitDetailPage({
   return (
     <HabitDetailContent
       habit={habit as Habit}
-      initialLogs={(logs ?? []) as HabitLog[]}
+      logs={(logs ?? []) as HabitLog[]}
       linkedTasks={(linkedTasks ?? []) as Task[]}
       allTasks={(allTasks ?? []) as Task[]}
       today={today}

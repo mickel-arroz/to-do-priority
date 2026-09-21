@@ -46,4 +46,4 @@ porque no hay nada pendiente.
 
 Las filas `missed` del backfill dejan de tener ningún efecto en el calendario,
 que ya derivaba el rojo de comparar fechas y ahora además exige que el día
-pidiera algo. Decidir qué hacer con ese backfill sigue abierto.
+pidiera algo. El backfill se borra en el ADR 0009.

@@ -30,6 +30,18 @@ export function requiredDays(linkedTasks: HabitDueTask[]): Set<string> {
   return new Set(linkedTasks.map((t) => t.due_date));
 }
 
+/**
+ * Días acreditados según los logs. Hoy un log sólo puede ser 'completed'
+ * (ADR 0009), pero el filtro se queda: una base a la que aún no se le haya
+ * pasado la migración `0010` conserva filas 'missed' del backfill viejo, y
+ * sin él contarían como días cumplidos.
+ */
+function accreditedDays(logs: HabitLog[]): Set<string> {
+  return new Set(
+    logs.filter((l) => l.status === "completed").map((l) => l.log_date)
+  );
+}
+
 /** Una tarea vinculada vista desde el listado: a qué hábito y qué día. */
 export type LinkedTaskDay = HabitDueTask & { habit_id: string };
 
@@ -76,9 +88,7 @@ export function computeHabitProgress(
   linkedTasks: HabitDueTask[],
   todayStr: string
 ): HabitProgress {
-  const completedSet = new Set(
-    logs.filter((l) => l.status === "completed").map((l) => l.log_date)
-  );
+  const completedSet = accreditedDays(logs);
   const required = requiredDays(linkedTasks);
 
   const indefinite = isIndefinite(habit);
@@ -163,9 +173,7 @@ export function buildCalendarData(
   year: number,
   month: number
 ): CalendarDay[] {
-  const completedSet = new Set(
-    logs.filter((l) => l.status === "completed").map((l) => l.log_date)
-  );
+  const completedSet = accreditedDays(logs);
   const required = requiredDays(linkedTasks);
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const days: CalendarDay[] = [];
@@ -205,9 +213,8 @@ export function buildChartSeries(
   linkedTasks: HabitDueTask[],
   todayStr: string
 ): { weekly: WeekPoint[]; cumulative: CumulativePoint[] } {
-  const completed = logs
-    .filter((l) => l.status === "completed" && l.log_date <= todayStr)
-    .map((l) => l.log_date)
+  const completed = [...accreditedDays(logs)]
+    .filter((date) => date <= todayStr)
     .sort();
 
   const weekly = new Map<string, number>();

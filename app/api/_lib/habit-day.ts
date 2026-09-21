@@ -11,10 +11,9 @@ import type { HabitDayTask } from "@/lib/habits";
  * memoria, para que el coste no crezca con la historia del hábito y para no
  * chocar con el tope de filas de PostgREST.
  *
- * Sólo escribe o borra la fila 'completed': un día no cumplido nunca se marca
- * aquí como fallado, porque fuera del modo castigo no debe restar nada. El
- * backfill de `POST /api/habits/[id]/logs` es quien rellena los 'missed'
- * pasados para que el calendario los pueda pintar.
+ * Escribe o borra la fila que acredita el día. Un día no cumplido no se guarda
+ * de ninguna forma: fallado o neutro se derivan en lectura de las tareas
+ * vinculadas (`docs/adr/0009-habit-logs-only-record-accredited-days.md`).
  */
 export async function syncHabitDay(
   ctx: AuthContext,
@@ -48,8 +47,7 @@ export async function syncHabitDay(
     .from("habit_logs")
     .delete()
     .eq("habit_id", habitId)
-    .eq("log_date", day)
-    .eq("status", "completed");
+    .eq("log_date", day);
 }
 
 /**
