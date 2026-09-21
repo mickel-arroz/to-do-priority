@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isUnauthorized, jsonError, requireUser } from "@/app/api/_lib/auth";
 import { subtaskTitleSchema } from "@/app/api/_lib/schemas";
+import { LIMITS } from "@/lib/limits";
 
 const createSchema = z.object({
   title: subtaskTitleSchema,
@@ -28,10 +29,17 @@ export async function POST(
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) return jsonError("invalid_payload", 400);
 
+  // Este count sale de calcular la posición, y de paso sostiene el tope: sin
+  // él, `LIMITS.subtasksPerTask` sería solo una regla del formulario y una
+  // petición a mano dejaría la tarea con cuantas quisiera. El camino de crear
+  // la tarea con sus subtareas de una vez ya lo cubre `taskSchema`.
   const { count } = await ctx.supabase
     .from("subtasks")
     .select("*", { count: "exact", head: true })
     .eq("task_id", id);
+
+  if ((count ?? 0) >= LIMITS.subtasksPerTask)
+    return jsonError("subtask_limit_reached", 400);
 
   const { data, error } = await ctx.supabase
     .from("subtasks")

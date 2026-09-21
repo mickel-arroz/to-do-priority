@@ -95,8 +95,9 @@ export const es: Dictionary = {
     images: "Imágenes",
     maxImages: "Hasta 3 imágenes",
     subtasks: "Subtareas",
-    subtaskLimitReached:
+    subtaskPasteTruncated:
       "Se alcanzó el tope de subtareas; el resto del pegado no se añadió.",
+    subtaskLimitReached: "Esta tarea ya tiene el máximo de subtareas.",
     addSubtask: "Añadir paso",
     recurrence: "Repetir",
     recurrenceNone: "Una vez",

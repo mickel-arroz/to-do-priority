@@ -200,7 +200,7 @@ export function TaskFormDialog({
     // hueco y desordenaría las posiciones.
     if (rowBusyId === "new") return;
 
-    if (titles.length > subtaskRoom) toast.info(t.tasks.subtaskLimitReached);
+    if (titles.length > subtaskRoom) toast.info(t.tasks.subtaskPasteTruncated);
     const fitting = titles.slice(0, Math.max(subtaskRoom, 0));
     // Sin hueco no entra nada, y entonces el campo se queda como estaba: lo
     // que hubiera escrito es suyo, no se tira por un pegado que no cupo.

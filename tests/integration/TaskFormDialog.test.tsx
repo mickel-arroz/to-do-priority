@@ -310,7 +310,7 @@ describe("TaskFormDialog: pegar varias subtareas", () => {
 
     expect(subtaskTitles()).toHaveLength(LIMITS.subtasksPerTask);
     expect(subtaskTitles().at(-1)).toBe(`Paso ${LIMITS.subtasksPerTask}`);
-    expect(toast.info).toHaveBeenCalledWith(es.tasks.subtaskLimitReached);
+    expect(toast.info).toHaveBeenCalledWith(es.tasks.subtaskPasteTruncated);
   });
 
   it("guarda la tarea con todas las subtareas pegadas", async () => {
@@ -390,7 +390,7 @@ describe("TaskFormDialog: pegar sin hueco para todas", () => {
     // El pegado no cupo, pero el borrador es del usuario: no se tira.
     expect(draftInput().value).toBe("A medio escribir");
     expect(addSubtaskMock).not.toHaveBeenCalled();
-    expect(toast.info).toHaveBeenCalledWith(es.tasks.subtaskLimitReached);
+    expect(toast.info).toHaveBeenCalledWith(es.tasks.subtaskPasteTruncated);
   });
 
   it("en edición solo sube las que caben en el hueco que queda", async () => {
@@ -400,7 +400,7 @@ describe("TaskFormDialog: pegar sin hueco para todas", () => {
     await waitFor(() => expect(addSubtaskMock).toHaveBeenCalledTimes(1));
     expect(addSubtaskMock.mock.calls[0][1]).toBe("Comprar pan");
     expect(subtaskTitles()).toHaveLength(LIMITS.subtasksPerTask);
-    expect(toast.info).toHaveBeenCalledWith(es.tasks.subtaskLimitReached);
+    expect(toast.info).toHaveBeenCalledWith(es.tasks.subtaskPasteTruncated);
   });
 
   it("deja el pegado de una sola línea larga como siempre, sin recortarlo", () => {

@@ -93,8 +93,9 @@ export const en = {
     images: "Images",
     maxImages: "Up to 3 images",
     subtasks: "Subtasks",
-    subtaskLimitReached:
+    subtaskPasteTruncated:
       "Subtask limit reached; the rest of the paste was not added.",
+    subtaskLimitReached: "This task already has the maximum subtasks.",
     addSubtask: "Add step",
     recurrence: "Repeat",
     recurrenceNone: "Once",
