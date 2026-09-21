@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { isUnauthorized, jsonError, requireUser } from "@/app/api/_lib/auth";
+import { dueDatesOf, syncHabitDays } from "@/app/api/_lib/habit-day";
 import { habitSchema, validationErrorResponse } from "@/app/api/_lib/schemas";
 
 export async function GET() {
@@ -49,6 +50,10 @@ export async function POST(request: Request) {
     await ctx.supabase.from("habits").delete().eq("id", habit.id);
     return jsonError(linkError.message, 500);
   }
+
+  // Las tareas vinculadas pueden estar ya cerradas: sus días cuentan desde el
+  // principio, no sólo a partir del siguiente cambio de estado.
+  await syncHabitDays(ctx, [habit.id], await dueDatesOf(ctx, task_ids));
 
   return NextResponse.json({ habit }, { status: 201 });
 }

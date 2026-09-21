@@ -35,5 +35,9 @@ Un día pasado puede cambiar de fallado a cumplido mucho después. El `upsert` d
 `habit_logs` con `onConflict: "habit_id,log_date"` sobrescribe el `missed` que el
 backfill hubiera puesto, así que el calendario se repinta solo.
 
-Queda un hueco conocido: cambiar el `due_date` de una tarea vinculada desde el
-`PATCH` no resincroniza ni el día viejo ni el nuevo.
+Toda mutación que cambie qué tareas vencen un día de un hábito tiene que
+pasar por `syncHabitDays` con los días que abandona y los que estrena: mover el
+`due_date`, borrar la tarea, deshacer una recurrente (los días de las instancias
+que se borran) y vincular o desvincular tareas al crear o editar el hábito. En
+los casos que rompen el vínculo —borrar, desvincular— los hábitos y días hay que
+capturarlos antes de escribir, porque después ya no se pueden resolver.

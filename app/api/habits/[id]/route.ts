@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { isUnauthorized, jsonError, requireUser } from "@/app/api/_lib/auth";
+import { dueDatesOf, syncHabitDays } from "@/app/api/_lib/habit-day";
 import { habitUpdateSchema, validationErrorResponse } from "@/app/api/_lib/schemas";
 
 export async function GET(
@@ -56,6 +57,20 @@ export async function PATCH(
   if (error) return jsonError(error.message, 500);
 
   if (task_ids) {
+    // Los vínculos se reemplazan enteros. Los días que hay que recalcular son
+    // los de las tareas que salen y los de las que entran, y hay que saber
+    // cuáles son antes de romper el conjunto viejo.
+    const { data: previous } = await ctx.supabase
+      .from("habit_tasks")
+      .select("task_id")
+      .eq("habit_id", id);
+    const before = new Set((previous ?? []).map((l) => l.task_id as string));
+    const after = new Set(task_ids);
+    const changed = [
+      ...[...before].filter((t) => !after.has(t)),
+      ...[...after].filter((t) => !before.has(t)),
+    ];
+
     await ctx.supabase.from("habit_tasks").delete().eq("habit_id", id);
     const { error: linkError } = await ctx.supabase.from("habit_tasks").insert(
       task_ids.map((task_id) => ({
@@ -65,6 +80,10 @@ export async function PATCH(
       }))
     );
     if (linkError) return jsonError(linkError.message, 500);
+
+    if (changed.length > 0) {
+      await syncHabitDays(ctx, [id], await dueDatesOf(ctx, changed));
+    }
   }
 
   return NextResponse.json({ habit });

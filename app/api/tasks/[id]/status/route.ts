@@ -51,13 +51,25 @@ export async function POST(
         .delete()
         .eq("id", lastCompletion.id);
     }
+    // Las instancias borradas también vencían en algún día del hábito: hay
+    // que capturar esos días antes de borrarlas y recalcularlos, o quedarían
+    // sin acreditar por una tarea pendiente que ya no existe.
+    const days = [task.due_date];
     if (task.recurrence_type !== "none" && task.completed_at) {
-      await ctx.supabase
+      const { data: instances } = await ctx.supabase
         .from("tasks")
-        .delete()
+        .select("id, due_date")
         .eq("status", "pending")
         .eq("recurrence_parent_id", task.recurrence_parent_id ?? task.id)
         .gte("created_at", task.completed_at);
+      const born = instances ?? [];
+      if (born.length > 0) {
+        days.push(...born.map((i) => i.due_date as string));
+        await ctx.supabase
+          .from("tasks")
+          .delete()
+          .in("id", born.map((i) => i.id as string));
+      }
     }
     const { data: updated, error } = await ctx.supabase
       .from("tasks")
@@ -66,7 +78,7 @@ export async function POST(
       .select()
       .single();
     if (error) return jsonError(error.message, 500);
-    await syncHabitDaysForTask(ctx, id, [task.due_date]);
+    await syncHabitDaysForTask(ctx, id, days);
     return NextResponse.json({ task: updated });
   }
 

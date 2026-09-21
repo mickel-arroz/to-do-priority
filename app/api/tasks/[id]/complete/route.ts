@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isUnauthorized, jsonError, requireUser } from "@/app/api/_lib/auth";
-import { syncHabitDaysForTask } from "@/app/api/_lib/habit-day";
+import { linkedHabitIds, syncHabitDays } from "@/app/api/_lib/habit-day";
 import { getNextDueDate } from "@/lib/recurrence";
 import type { Task } from "@/lib/types";
 
@@ -56,10 +56,7 @@ export async function POST(
     .single();
   if (updateError) return jsonError(updateError.message, 500);
 
-  const { data: habitLinks } = await ctx.supabase
-    .from("habit_tasks")
-    .select("habit_id")
-    .eq("task_id", task.id);
+  const habitIds = await linkedHabitIds(ctx, task.id);
 
   // Next instance for recurring tasks: always one interval after the original
   // due date, regardless of when it was marked. An overdue task stays overdue
@@ -103,10 +100,10 @@ export async function POST(
     }
 
     // The next instance inherits the habit links so future days keep counting
-    if (habitLinks && habitLinks.length > 0) {
+    if (habitIds.length > 0) {
       await ctx.supabase.from("habit_tasks").insert(
-        habitLinks.map((h) => ({
-          habit_id: h.habit_id,
+        habitIds.map((habit_id) => ({
+          habit_id,
           task_id: created.id,
           user_id: ctx.user.id,
         }))
@@ -123,10 +120,10 @@ export async function POST(
   // La instancia siguiente puede nacer con una fecha ya pasada (una tarea
   // vencida no desplaza su cadencia), y entonces ese día vuelve a tener una
   // tarea pendiente: hay que recalcularlo también o se quedaría acreditado.
-  if (habitLinks && habitLinks.length > 0) {
+  if (habitIds.length > 0) {
     const days = [task.due_date];
     if (nextTask) days.push(nextTask.due_date);
-    await syncHabitDaysForTask(ctx, task.id, days);
+    await syncHabitDays(ctx, habitIds, days);
   }
 
   return NextResponse.json({ task: updated, nextTask });
