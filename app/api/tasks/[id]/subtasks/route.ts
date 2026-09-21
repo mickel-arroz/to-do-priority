@@ -1,16 +1,16 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isUnauthorized, jsonError, requireUser } from "@/app/api/_lib/auth";
-import { LIMITS } from "@/lib/limits";
+import { subtaskTitleSchema } from "@/app/api/_lib/schemas";
 
 const createSchema = z.object({
-  title: z.string().trim().min(1).max(LIMITS.subtaskTitle),
+  title: subtaskTitleSchema,
 });
 const patchSchema = z
   .object({
     subtaskId: z.string().uuid(),
     is_done: z.boolean().optional(),
-    title: z.string().trim().min(1).max(LIMITS.subtaskTitle).optional(),
+    title: subtaskTitleSchema.optional(),
   })
   .refine((v) => v.is_done !== undefined || v.title !== undefined, {
     message: "no_fields",

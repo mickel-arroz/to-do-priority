@@ -3,6 +3,17 @@ import { z } from "zod";
 import { MAX_BLOCKS_PER_DAY, MINUTES_IN_DAY } from "@/lib/availability";
 import { LIMITS } from "@/lib/limits";
 
+/**
+ * Un título de subtarea, con el mismo tope en las tres superficies que lo
+ * aceptan: la creación de tarea con subtareas, el POST y el PATCH de la ruta
+ * de subtareas.
+ */
+export const subtaskTitleSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(LIMITS.subtaskTitle);
+
 export const taskSchema = z.object({
   title: z.string().trim().min(1).max(LIMITS.taskTitle),
   description: z.string().max(LIMITS.taskDescription).nullish(),
@@ -17,7 +28,7 @@ export const taskSchema = z.object({
   recurrence_weekdays: z.array(z.number().int().min(0).max(6)).nullish(),
   recurrence_interval: z.number().int().min(1).max(60).optional(),
   subtasks: z
-    .array(z.object({ title: z.string().trim().min(1).max(LIMITS.subtaskTitle) }))
+    .array(z.object({ title: subtaskTitleSchema }))
     .max(50)
     .optional(),
 });

@@ -6,7 +6,7 @@
 export const LIMITS = {
   taskTitle: 100,
   taskDescription: 4000,
-  subtaskTitle: 100,
+  subtaskTitle: 200,
   habitName: 120,
   habitDescription: 2000,
   categoryName: 60,
