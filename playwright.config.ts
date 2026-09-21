@@ -33,7 +33,7 @@ export default defineConfig({
         storageState: "tests/e2e/.auth/user.json",
       },
       dependencies: ["setup"],
-      testMatch: /(swipe|mobile)\.spec\.ts/,
+      testMatch: /(swipe|mobile|scrollbars)\.spec\.ts/,
     },
   ],
   webServer: {
