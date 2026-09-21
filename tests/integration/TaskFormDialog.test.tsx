@@ -5,7 +5,7 @@ import { TaskFormDialog } from "@/components/tasks/TaskFormDialog";
 import { getDictionary } from "@/lib/i18n";
 import { LIMITS } from "@/lib/limits";
 import type { Category } from "@/lib/types";
-import { renderWithProviders, routerMock } from "./helpers";
+import { makeTask, renderWithProviders, routerMock } from "./helpers";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => routerMock,
@@ -115,6 +115,33 @@ describe("TaskFormDialog: límite de subtareas", () => {
 
     expect(edit).toHaveAttribute("aria-invalid", "true");
     expect(screen.getByTestId("task-save")).toBeDisabled();
+  });
+});
+
+describe("TaskFormDialog: el borrar de la tarea", () => {
+  it("vive al final del contenido en el teléfono y en el pie en escritorio", () => {
+    renderWithProviders(
+      <TaskFormDialog
+        open
+        onOpenChange={vi.fn()}
+        categories={categories}
+        task={makeTask()}
+        today={TODAY}
+      />
+    );
+
+    // Son dos copias del mismo botón, cada una visible en su ancho: CSS no
+    // mueve un nodo del cuerpo al pie.
+    const body = document.querySelector('[data-slot="dialog-body"]')!;
+    const footer = document.querySelector('[data-slot="dialog-footer"]')!;
+    expect(body).toContainElement(screen.getByTestId("task-delete-mobile"));
+    expect(footer).toContainElement(screen.getByTestId("task-delete"));
+  });
+
+  it("no aparece al crear una tarea", () => {
+    open();
+    expect(screen.queryByTestId("task-delete")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("task-delete-mobile")).not.toBeInTheDocument();
   });
 });
 

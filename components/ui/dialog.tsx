@@ -94,6 +94,8 @@ const FIXED_HEADER_AND_FOOTER = [
   // A pantalla completa todo respira un punto más, como el resto del móvil.
   "max-sm:[&>[data-slot=dialog-header]]:px-5 max-sm:[&>[data-slot=dialog-header]]:pt-5",
   "max-sm:[&_[data-slot=dialog-body]]:px-5",
+  // La cabecera baja 1, y el cerrar con ella, para seguir centrado en su línea.
+  "max-sm:[&>[data-slot=dialog-close]]:top-4",
 ].join(" ")
 
 /**
@@ -151,10 +153,15 @@ function DialogContent({
         {showCloseButton && (
           // Se queda en la esquina porque el Content nunca scrollea: a pantalla
           // completa el scroll vive en el `DialogBody`, no aquí.
+          //
+          // El `top` centra el botón (28) contra la línea del título, que
+          // empieza en el padding superior del diálogo y mide lo que la fuente
+          // porque va con `leading-none`: 16 + 16/2 - 14 en escritorio, y
+          // 16 + 20/2 - 14 en móvil, donde el título crece a `text-xl`.
           <DialogPrimitive.Close data-slot="dialog-close" asChild>
             <Button
               variant="ghost"
-              className="absolute top-2 right-2"
+              className="absolute top-2.5 right-2 max-sm:top-3"
               size="icon-sm"
             >
               <XIcon

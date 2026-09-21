@@ -319,6 +319,41 @@ export function TaskFormDialog({
 
   const busy = saving || deleting;
   const handleOpenChange = useLockedOpenChange(busy, onOpenChange);
+
+  /**
+   * El borrar de la tarea. Se pinta dos veces —al final del contenido en el
+   * teléfono y a la izquierda del pie en escritorio— porque son contenedores
+   * distintos y CSS no mueve un nodo de uno a otro; sólo una es visible.
+   */
+  const deleteTask = (className: string, testId: string) => (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          className={cn("text-destructive hover:text-destructive", className)}
+          data-testid={testId}
+        >
+          <Trash2 className="size-4" />
+          {t.tasks.deleteTask}
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{t.tasks.deleteTask}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {t.tasks.deleteTaskConfirm}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
+          <AlertDialogAction onClick={handleDelete} disabled={deleting}>
+            {t.common.delete}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
   // Live subtask edits persist immediately but the list's counters read from
   // server data, so refresh once on close if anything changed.
   const closeAndSync = useCallback(
@@ -639,43 +674,20 @@ export function TaskFormDialog({
                   </Button>
                 </div>
               </div>
+
+              {/* En el teléfono el borrar sale del pie y cierra el contenido, con
+                  algo de aire por encima: es destructivo y no se pulsa por
+                  descuido al ir a guardar. El `pt` suma al `space-y` del cuerpo,
+                  que a un `mt` lo pisaría. */}
+              {task && (
+                <div className="pt-2 sm:hidden">
+                  {deleteTask("h-11 w-full text-base", "task-delete-mobile")}
+                </div>
+              )}
             </DialogBody>
 
-            {/* En móvil sin invertir: eliminar es lo primero de la columna, no lo
-                último debajo de guardar y cancelar. */}
-            <DialogFooter className="max-sm:flex-col">
-              {task && (
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className="mr-auto text-destructive hover:text-destructive"
-                      data-testid="task-delete"
-                    >
-                      <Trash2 className="size-4" />
-                      {t.tasks.deleteTask}
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>{t.tasks.deleteTask}</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        {t.tasks.deleteTaskConfirm}
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={handleDelete}
-                        disabled={deleting}
-                      >
-                        {t.common.delete}
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              )}
+            <DialogFooter>
+              {task && deleteTask("mr-auto max-sm:hidden", "task-delete")}
               <Button type="button" variant="ghost" onClick={() => closeAndSync(false)}>
                 {t.common.cancel}
               </Button>
