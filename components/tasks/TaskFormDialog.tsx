@@ -50,6 +50,7 @@ import { apiErrorMessage } from "@/lib/api/error-message";
 import { useT } from "@/lib/i18n/locale-context";
 import { LIMITS } from "@/lib/limits";
 import { DEFAULT_PRIORITY } from "@/lib/priority";
+import { parsePastedSubtasks } from "@/lib/subtask-paste";
 import type { Category, Priority, Subtask, Task } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -158,11 +159,56 @@ export function TaskFormDialog({
     }
   }
 
+  // Cuántas subtareas más caben. En creación se cuentan las del borrador; en
+  // edición, las que ya viven en la tarea.
+  const subtaskRoom =
+    LIMITS.subtasksPerTask -
+    (task ? existingSubtasks.length : newSubtasks.length);
+
+  // La condición de alta, en un solo sitio: el botón, el Enter y el pegado
+  // deciden lo mismo.
+  const canAddSubtask =
+    subtaskDraft.trim().length > 0 && !subtaskDraftOver && subtaskRoom > 0;
+
   function addSubtask() {
-    const draft = subtaskDraft.trim();
-    if (!draft || draft.length > LIMITS.subtaskTitle) return;
-    setNewSubtasks((prev) => [...prev, draft]);
+    if (!canAddSubtask) return;
+    setNewSubtasks((prev) => [...prev, subtaskDraft.trim()]);
     setSubtaskDraft("");
+  }
+
+  /**
+   * Pegar un bloque de texto crea una subtarea por línea en vez de meterlo
+   * entero en una sola. Un pegado de una línea no se toca: cae en el campo
+   * como siempre, que es lo que espera quien copia un título suelto.
+   */
+  function handleSubtaskPaste(e: React.ClipboardEvent<HTMLInputElement>) {
+    const el = e.currentTarget;
+    const start = el.selectionStart ?? el.value.length;
+    const end = el.selectionEnd ?? el.value.length;
+    // Se parsea el campo entero con lo pegado ya insertado en el cursor, así
+    // lo que estuviera a medio escribir se fusiona con la primera línea en
+    // vez de perderse.
+    const titles = parsePastedSubtasks(
+      el.value.slice(0, start) +
+        e.clipboardData.getData("text/plain") +
+        el.value.slice(end)
+    );
+    if (titles.length < 2) return;
+    e.preventDefault();
+
+    // Un segundo pegado mientras el anterior sigue subiendo contaría mal el
+    // hueco y desordenaría las posiciones.
+    if (rowBusyId === "new") return;
+
+    if (titles.length > subtaskRoom) toast.info(t.tasks.subtaskLimitReached);
+    const fitting = titles.slice(0, Math.max(subtaskRoom, 0));
+    // Sin hueco no entra nada, y entonces el campo se queda como estaba: lo
+    // que hubiera escrito es suyo, no se tira por un pegado que no cupo.
+    if (fitting.length === 0) return;
+
+    setSubtaskDraft("");
+    if (task) void addExistingSubtasks(fitting);
+    else setNewSubtasks((prev) => [...prev, ...fitting]);
   }
 
   function startEdit(index: number) {
@@ -250,21 +296,34 @@ export function TaskFormDialog({
     }
   }
 
-  async function addExistingSubtask() {
-    if (!task) return;
-    const draft = subtaskDraft.trim();
-    if (!draft || draft.length > LIMITS.subtaskTitle) return;
+  /**
+   * Las crea de una en una y en orden a propósito: el `position` lo calcula el
+   * servidor contando las que ya hay, así que en paralelo saldrían barajadas.
+   * Devuelve si entraron todas, que es lo que mira el alta de una sola para
+   * no vaciar el campo cuando falla. El pegado no puede deshacerse igual: sus
+   * títulos ya no están en el campo, así que sube lo que pueda y avisa.
+   */
+  async function addExistingSubtasks(titles: string[]) {
+    if (!task) return false;
     setRowBusyId("new");
     try {
-      const { subtask } = await api.tasks.addSubtask(task.id, draft);
-      setExistingSubtasks((prev) => [...prev, subtask]);
-      setSubtaskDraft("");
-      setSubtasksDirty(true);
+      for (const title of titles) {
+        const { subtask } = await api.tasks.addSubtask(task.id, title);
+        setExistingSubtasks((prev) => [...prev, subtask]);
+        setSubtasksDirty(true);
+      }
+      return true;
     } catch (err) {
       toast.error(apiErrorMessage(err, t));
+      return false;
     } finally {
       setRowBusyId(null);
     }
+  }
+
+  async function addExistingSubtask() {
+    if (!canAddSubtask) return;
+    if (await addExistingSubtasks([subtaskDraft.trim()])) setSubtaskDraft("");
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -651,6 +710,7 @@ export function TaskFormDialog({
                     onChange={(e) => setSubtaskDraft(e.target.value)}
                     placeholder={t.tasks.addSubtask}
                     aria-invalid={subtaskDraftOver}
+                    onPaste={handleSubtaskPaste}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         e.preventDefault();
@@ -664,11 +724,7 @@ export function TaskFormDialog({
                     variant="outline"
                     size="icon"
                     onClick={task ? addExistingSubtask : addSubtask}
-                    disabled={
-                      !subtaskDraft.trim() ||
-                      subtaskDraftOver ||
-                      rowBusyId === "new"
-                    }
+                    disabled={!canAddSubtask || rowBusyId === "new"}
                   >
                     <Plus className="size-4" />
                   </Button>

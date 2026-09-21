@@ -32,6 +32,15 @@ const EXPECTED: Record<string, keyof typeof LIMITS> = {
   task_completions_title_snapshot_length_check: "taskTitle",
 };
 
+/**
+ * Lo que `LIMITS` guarda y no es un tope de longitud de texto, y por tanto no
+ * le toca constraint de `length(...)`: `subtasksPerTask` cuenta filas, que en
+ * la base pediría un trigger, no un check. Va nombrado uno a uno a propósito,
+ * para que dejar un tope de texto sin constraint siga siendo imposible por
+ * descuido.
+ */
+const NOT_A_TEXT_LENGTH: (keyof typeof LIMITS)[] = ["subtasksPerTask"];
+
 /** `add constraint <nombre> check (... <= 123)` -> { nombre: 123 } */
 function parseConstraints(sql: string): Record<string, number> {
   const found: Record<string, number> = {};
@@ -46,6 +55,7 @@ describe("constraints de longitud en la base de datos", () => {
   it("declara una constraint por cada tope de texto de LIMITS", () => {
     const covered = new Set(Object.values(EXPECTED));
     for (const key of Object.keys(LIMITS) as (keyof typeof LIMITS)[]) {
+      if (NOT_A_TEXT_LENGTH.includes(key)) continue;
       expect(covered, `LIMITS.${key} no tiene constraint en la base`).toContain(
         key
       );

@@ -29,7 +29,7 @@ export const taskSchema = z.object({
   recurrence_interval: z.number().int().min(1).max(60).optional(),
   subtasks: z
     .array(z.object({ title: subtaskTitleSchema }))
-    .max(50)
+    .max(LIMITS.subtasksPerTask)
     .optional(),
 });
 

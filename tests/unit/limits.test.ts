@@ -3,6 +3,7 @@ import { subtaskTitleSchema, taskSchema } from "@/app/api/_lib/schemas";
 import { LIMITS } from "@/lib/limits";
 
 const MAX = LIMITS.subtaskTitle;
+const MAX_COUNT = LIMITS.subtasksPerTask;
 
 const task = {
   title: "Regar las plantas",
@@ -11,11 +12,20 @@ const task = {
   priority: 4,
 };
 
+const steps = (n: number) =>
+  Array.from({ length: n }, (_, i) => ({ title: `Paso ${i + 1}` }));
+
 describe("LIMITS.subtaskTitle", () => {
   // El único sitio donde el tope se escribe a mano: fija el valor canónico
   // para que subirlo o bajarlo sea una decisión y no un descuido.
   it("vale 200 caracteres", () => {
     expect(MAX).toBe(200);
+  });
+});
+
+describe("LIMITS.subtasksPerTask", () => {
+  it("vale 50 subtareas", () => {
+    expect(MAX_COUNT).toBe(50);
   });
 });
 
@@ -44,6 +54,19 @@ describe("taskSchema: subtareas", () => {
     const parsed = taskSchema.safeParse({
       ...task,
       subtasks: [{ title: "a".repeat(MAX + 1) }],
+    });
+    expect(parsed.success).toBe(false);
+  });
+
+  it("acepta tantas subtareas como diga el tope", () => {
+    const parsed = taskSchema.safeParse({ ...task, subtasks: steps(MAX_COUNT) });
+    expect(parsed.success).toBe(true);
+  });
+
+  it("rechaza una subtarea de más", () => {
+    const parsed = taskSchema.safeParse({
+      ...task,
+      subtasks: steps(MAX_COUNT + 1),
     });
     expect(parsed.success).toBe(false);
   });
