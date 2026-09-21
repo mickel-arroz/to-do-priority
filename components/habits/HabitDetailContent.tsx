@@ -29,12 +29,17 @@ import { api } from "@/lib/api/client";
 import { computeHabitProgress } from "@/lib/habits";
 import { useT } from "@/lib/i18n/locale-context";
 import { priorityClasses } from "@/lib/priority";
+import { dedupeRecurrenceSeries } from "@/lib/tasks";
 import type { Habit, HabitLog, Task } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type HabitDetailContentProps = {
   habit: Habit;
   initialLogs: HabitLog[];
+  /**
+   * Todas las tareas vinculadas, con cada instancia recurrente: sus
+   * `due_date` dicen qué días pedían algo. La lista visible se deduplica.
+   */
   linkedTasks: Task[];
   /** All pending tasks, for the edit dialog */
   allTasks: Task[];
@@ -69,7 +74,8 @@ export function HabitDetailContent({
       .catch(() => {});
   }, [habit.id]);
 
-  const progress = computeHabitProgress(habit, logs, today);
+  const progress = computeHabitProgress(habit, logs, linkedTasks, today);
+  const shownTasks = dedupeRecurrenceSeries(linkedTasks);
 
   async function handleDelete() {
     setDeleting(true);
@@ -181,14 +187,19 @@ export function HabitDetailContent({
       <div className="grid gap-4 lg:grid-cols-[minmax(0,380px)_1fr]">
         <Card>
           <CardContent className="p-4">
-            <HabitCalendar habit={habit} logs={logs} today={today} />
+            <HabitCalendar
+              habit={habit}
+              logs={logs}
+              linkedTasks={linkedTasks}
+              today={today}
+            />
           </CardContent>
         </Card>
 
         <div className="space-y-2">
           <p className="font-heading font-semibold">{t.habits.linkedTasks}</p>
           <ul className="space-y-1.5">
-            {linkedTasks.map((task) => (
+            {shownTasks.map((task) => (
               <li
                 key={task.id}
                 className="flex items-center gap-2 rounded-xl border bg-card px-3 py-2 text-sm"
@@ -206,7 +217,7 @@ export function HabitDetailContent({
         </div>
       </div>
 
-      <HabitCharts habit={habit} logs={logs} today={today} />
+      <HabitCharts habit={habit} logs={logs} linkedTasks={linkedTasks} today={today} />
 
       <HabitFormDialog
         open={editOpen}

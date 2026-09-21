@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildCalendarData,
+  buildChartSeries,
   computeHabitProgress,
   isHabitDayCompleted,
   isIndefinite,
@@ -28,6 +29,16 @@ function log(date: string, status: "completed" | "missed" = "completed"): HabitL
 
 const TODAY = "2026-08-14";
 
+/** Tareas vinculadas que vencen en cada uno de los días indicados. */
+function dueOn(...dates: string[]) {
+  return dates.map((due_date) => ({ due_date }));
+}
+
+/** Una tarea diaria: todos los días de agosto de 2026 piden algo. */
+const DAILY = dueOn(
+  ...Array.from({ length: 31 }, (_, i) => `2026-08-${String(i + 1).padStart(2, "0")}`)
+);
+
 describe("isIndefinite", () => {
   it("is indefinite only without target_days and end_date", () => {
     expect(isIndefinite(habit({ target_days: null, end_date: null }))).toBe(true);
@@ -39,7 +50,7 @@ describe("isIndefinite", () => {
 describe("computeHabitProgress", () => {
   it("counts consecutive completed days and streaks", () => {
     const logs = ["2026-08-11", "2026-08-12", "2026-08-13"].map((d) => log(d));
-    const p = computeHabitProgress(habit({ start_date: "2026-08-11" }), logs, TODAY);
+    const p = computeHabitProgress(habit({ start_date: "2026-08-11" }), logs, DAILY, TODAY);
     expect(p.completedDays).toBe(3);
     expect(p.currentStreak).toBe(3);
     expect(p.bestStreak).toBe(3);
@@ -50,6 +61,7 @@ describe("computeHabitProgress", () => {
     const p = computeHabitProgress(
       habit({ start_date: "2026-08-13" }),
       [log("2026-08-13")],
+      DAILY,
       TODAY
     );
     expect(p.missedDays).toBe(0);
@@ -60,6 +72,7 @@ describe("computeHabitProgress", () => {
     const p = computeHabitProgress(
       habit({ start_date: "2026-08-13" }),
       [log("2026-08-13"), log("2026-08-14")],
+      DAILY,
       TODAY
     );
     expect(p.completedDays).toBe(2);
@@ -72,6 +85,7 @@ describe("computeHabitProgress", () => {
     const p = computeHabitProgress(
       habit({ punishment_enabled: true, start_date: "2026-08-01" }),
       logs,
+      DAILY,
       TODAY
     );
     // 2 completed, first miss -2 -> 0, remaining misses clamp at 0
@@ -85,6 +99,7 @@ describe("computeHabitProgress", () => {
     const p = computeHabitProgress(
       habit({ punishment_enabled: true, start_date: "2026-08-10" }),
       logs,
+      DAILY,
       TODAY
     );
     expect(p.progress).toBe(1);
@@ -101,6 +116,7 @@ describe("computeHabitProgress", () => {
         start_date: "2026-08-10",
       }),
       logs,
+      DAILY,
       TODAY
     );
     expect(p.isIndefinite).toBe(true);
@@ -111,6 +127,7 @@ describe("computeHabitProgress", () => {
     const p = computeHabitProgress(
       habit({ target_days: null, end_date: "2026-08-10", start_date: "2026-08-01" }),
       [],
+      DAILY,
       TODAY
     );
     expect(p.target).toBe(10);
@@ -122,6 +139,7 @@ describe("computeHabitProgress", () => {
     const p = computeHabitProgress(
       habit({ target_days: null, end_date: "2026-08-03", start_date: "2026-08-01" }),
       logs,
+      DAILY,
       TODAY
     );
     expect(p.completedDays).toBe(3);
@@ -134,6 +152,7 @@ describe("computeHabitProgress", () => {
     const p = computeHabitProgress(
       habit({ target_days: 2, start_date: "2026-08-01" }),
       logs,
+      DAILY,
       TODAY
     );
     expect(p.progress).toBe(2);
@@ -144,13 +163,105 @@ describe("computeHabitProgress", () => {
 describe("buildCalendarData", () => {
   it("marks statuses per day", () => {
     const h = habit({ start_date: "2026-08-10" });
-    const days = buildCalendarData(h, [log("2026-08-12")], TODAY, 2026, 7);
+    const days = buildCalendarData(h, [log("2026-08-12")], DAILY, TODAY, 2026, 7);
     const byDate = Object.fromEntries(days.map((d) => [d.date, d.status]));
     expect(byDate["2026-08-05"]).toBe("before-start");
     expect(byDate["2026-08-11"]).toBe("missed");
     expect(byDate["2026-08-12"]).toBe("completed");
     expect(byDate["2026-08-14"]).toBe("today-pending");
     expect(byDate["2026-08-20"]).toBe("future");
+  });
+});
+
+describe("días neutros: sin tarea vencida no hay nada que juzgar", () => {
+  // Hábito de tarea semanal (lunes) cumplida sin fallar: 08-03 y 08-10.
+  const MONDAYS = dueOn("2026-08-03", "2026-08-10", "2026-08-17");
+  const mondayLogs = [log("2026-08-03"), log("2026-08-10")];
+
+  it("un hábito semanal perfecto progresa un día por semana, con castigo", () => {
+    const p = computeHabitProgress(
+      habit({ punishment_enabled: true, start_date: "2026-08-01" }),
+      mondayLogs,
+      MONDAYS,
+      TODAY
+    );
+    expect(p.progress).toBe(2);
+    expect(p.completedDays).toBe(2);
+    expect(p.missedDays).toBe(0);
+    expect(p.completionRate).toBe(100);
+  });
+
+  it("y también sin castigo", () => {
+    const p = computeHabitProgress(
+      habit({ start_date: "2026-08-01" }),
+      mondayLogs,
+      MONDAYS,
+      TODAY
+    );
+    expect(p.progress).toBe(2);
+    expect(p.missedDays).toBe(0);
+    expect(p.completionRate).toBe(100);
+  });
+
+  it("un día neutro no rompe la racha", () => {
+    const p = computeHabitProgress(
+      habit({ start_date: "2026-08-01" }),
+      mondayLogs,
+      MONDAYS,
+      TODAY
+    );
+    expect(p.currentStreak).toBe(2);
+    expect(p.bestStreak).toBe(2);
+  });
+
+  it("un día que sí pedía algo y no se cumplió sigue siendo fallado", () => {
+    const p = computeHabitProgress(
+      habit({ punishment_enabled: true, start_date: "2026-08-01" }),
+      [log("2026-08-03")],
+      MONDAYS,
+      TODAY
+    );
+    // 08-03 +1, 08-10 fallado -2 → 0
+    expect(p.progress).toBe(0);
+    expect(p.missedDays).toBe(1);
+    expect(p.currentStreak).toBe(0);
+    expect(p.completionRate).toBe(50);
+  });
+
+  it("sin ninguna tarea vinculada no hay días fallados ni tasa", () => {
+    const p = computeHabitProgress(habit({ start_date: "2026-08-01" }), [], [], TODAY);
+    expect(p.missedDays).toBe(0);
+    expect(p.completionRate).toBe(0);
+  });
+
+  it("el calendario distingue el día neutro del fallado", () => {
+    const h = habit({ start_date: "2026-08-01" });
+    const days = buildCalendarData(h, mondayLogs, MONDAYS, TODAY, 2026, 7);
+    const byDate = Object.fromEntries(days.map((d) => [d.date, d.status]));
+    expect(byDate["2026-08-03"]).toBe("completed");
+    expect(byDate["2026-08-04"]).toBe("neutral");
+    expect(byDate["2026-08-17"]).toBe("future");
+    expect(byDate["2026-08-14"]).toBe("neutral"); // hoy sin nada que hacer
+    expect(byDate["2026-07-31"]).toBe(undefined);
+
+    const failed = buildCalendarData(h, [], dueOn("2026-08-04", TODAY), TODAY, 2026, 7);
+    const byDate2 = Object.fromEntries(failed.map((d) => [d.date, d.status]));
+    expect(byDate2["2026-08-04"]).toBe("missed");
+    expect(byDate2["2026-08-14"]).toBe("today-pending");
+  });
+
+  it("la curva acumulada no castiga los días neutros", () => {
+    const { cumulative } = buildChartSeries(
+      habit({ punishment_enabled: true, start_date: "2026-08-01" }),
+      mondayLogs,
+      MONDAYS,
+      TODAY
+    );
+    const at = Object.fromEntries(cumulative.map((c) => [c.date, c.progress]));
+    expect(at["2026-08-03"]).toBe(1);
+    expect(at["2026-08-09"]).toBe(1);
+    expect(at["2026-08-10"]).toBe(2);
+    expect(at["2026-08-13"]).toBe(2);
   });
 });
 

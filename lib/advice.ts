@@ -115,9 +115,14 @@ export function linkedTaskIds(habits: Habit[]): string[] {
 }
 
 /** Un hábito terminado alcanzó su objetivo o dejó atrás su fecha de fin. */
-function isFinishedHabit(habit: Habit, logs: HabitLog[], today: string): boolean {
+function isFinishedHabit(
+  habit: Habit,
+  logs: HabitLog[],
+  linked: Task[],
+  today: string
+): boolean {
   if (habit.end_date !== null && habit.end_date < today) return true;
-  return computeHabitProgress(habit, logs, today).isFinished;
+  return computeHabitProgress(habit, logs, linked, today).isFinished;
 }
 
 export function buildAdvicePayload(input: {
@@ -152,6 +157,10 @@ export function buildAdvicePayload(input: {
   }
 
   const tasksById = new Map(tasks.map((t) => [t.id, t]));
+  const linkedTo = (h: Habit) =>
+    linkedTaskIds([h])
+      .map((id) => tasksById.get(id))
+      .filter((t): t is Task => t !== undefined);
 
   return {
     today,
@@ -175,12 +184,10 @@ export function buildAdvicePayload(input: {
     completedLastWeek: resolvedInWindow("yes"),
     failedLastWeek: resolvedInWindow("no"),
     habits: habits
-      .filter((h) => !isFinishedHabit(h, logsByHabit.get(h.id) ?? [], today))
-      .map((h) => {
-        const progress = computeHabitProgress(h, logsByHabit.get(h.id) ?? [], today);
-        const linked = linkedTaskIds([h])
-          .map((id) => tasksById.get(id))
-          .filter((t): t is Task => t !== undefined);
+      .map((h) => ({ h, logs: logsByHabit.get(h.id) ?? [], linked: linkedTo(h) }))
+      .filter(({ h, logs, linked }) => !isFinishedHabit(h, logs, linked, today))
+      .map(({ h, logs, linked }) => {
+        const progress = computeHabitProgress(h, logs, linked, today);
         return {
           id: h.id,
           name: h.name,

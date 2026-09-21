@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ChevronLeft, ChevronRight } from "@/components/icons";
 import { Button } from "@/components/ui/button";
-import { buildCalendarData } from "@/lib/habits";
+import { buildCalendarData, type HabitDueTask } from "@/lib/habits";
 import { useLocale } from "@/lib/i18n/locale-context";
 import type { Habit, HabitLog } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -21,6 +21,9 @@ const WEEKDAYS: Record<"es" | "en", string[]> = {
 const DAY_STYLES: Record<string, string> = {
   completed: "bg-success text-on-strong",
   missed: "bg-failure text-on-strong",
+  // Dentro del rango pero sin nada que hacer: gris y sin relleno, como un día
+  // fuera de rango, con borde para que se vea que el hábito ya corría.
+  neutral: "border border-border text-muted-foreground/50",
   "today-pending": "border-2 border-primary text-primary font-bold",
   future: "bg-muted text-muted-foreground/50",
   "before-start": "text-muted-foreground/30",
@@ -29,17 +32,19 @@ const DAY_STYLES: Record<string, string> = {
 export function HabitCalendar({
   habit,
   logs,
+  linkedTasks,
   today,
 }: {
   habit: Habit;
   logs: HabitLog[];
+  linkedTasks: HabitDueTask[];
   today: string;
 }) {
   const { locale } = useLocale();
   const [year, setYear] = useState(Number(today.slice(0, 4)));
   const [month, setMonth] = useState(Number(today.slice(5, 7)) - 1);
 
-  const days = buildCalendarData(habit, logs, today, year, month);
+  const days = buildCalendarData(habit, logs, linkedTasks, today, year, month);
   // Monday-first offset for the first day of the month
   const firstWeekday = (new Date(year, month, 1).getDay() + 6) % 7;
 

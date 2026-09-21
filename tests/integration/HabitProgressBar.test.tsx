@@ -7,6 +7,11 @@ import { renderWithProviders } from "./helpers";
 
 const TODAY = "2026-08-14";
 
+// Una tarea diaria: cada día de agosto pedía algo.
+const DAILY = Array.from({ length: 31 }, (_, i) => ({
+  due_date: `2026-08-${String(i + 1).padStart(2, "0")}`,
+}));
+
 function habit(partial: Partial<Habit>): Habit {
   return {
     id: "h1",
@@ -37,6 +42,7 @@ describe("HabitProgressBar", () => {
     const progress = computeHabitProgress(
       h,
       logs(["2026-08-11", "2026-08-12", "2026-08-13"]),
+      DAILY,
       TODAY
     );
     renderWithProviders(<HabitProgressBar progress={progress} />);
@@ -46,7 +52,7 @@ describe("HabitProgressBar", () => {
 
   it("shows the indefinite variant without a bar", () => {
     const h = habit({ target_days: null, end_date: null, start_date: "2026-08-11" });
-    const progress = computeHabitProgress(h, logs(["2026-08-11"]), TODAY);
+    const progress = computeHabitProgress(h, logs(["2026-08-11"]), DAILY, TODAY);
     renderWithProviders(<HabitProgressBar progress={progress} />);
     expect(screen.getByTestId("habit-progress")).toHaveTextContent("Indefinido");
   });

@@ -19,18 +19,28 @@ import { HabitProgressBar } from "@/components/habits/HabitProgressBar";
 import { StreakBadge } from "@/components/habits/StreakBadge";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { EmptyState } from "@/components/ui/empty-state";
-import { computeHabitProgress } from "@/lib/habits";
+import { computeHabitProgress, groupTaskDaysByHabit } from "@/lib/habits";
+import type { LinkedTaskDay } from "@/lib/habits";
 import { useT } from "@/lib/i18n/locale-context";
 import type { Habit, HabitLog, Task } from "@/lib/types";
 
 type HabitsContentProps = {
   habits: Habit[];
   logs: HabitLog[];
+  /** Tareas pendientes, para el diálogo de creación. */
   tasks: Task[];
+  /** Vencimiento de cada tarea vinculada, por hábito, en cualquier estado. */
+  taskDays: LinkedTaskDay[];
   today: string;
 };
 
-export function HabitsContent({ habits, logs, tasks, today }: HabitsContentProps) {
+export function HabitsContent({
+  habits,
+  logs,
+  tasks,
+  taskDays,
+  today,
+}: HabitsContentProps) {
   const t = useT();
   const [formOpen, setFormOpen] = useState(false);
 
@@ -40,6 +50,7 @@ export function HabitsContent({ habits, logs, tasks, today }: HabitsContentProps
     list.push(log);
     logsByHabit.set(log.habit_id, list);
   }
+  const daysByHabit = groupTaskDaysByHabit(taskDays);
 
   return (
     <div className="space-y-6" data-testid="habits-page">
@@ -61,6 +72,7 @@ export function HabitsContent({ habits, logs, tasks, today }: HabitsContentProps
             const progress = computeHabitProgress(
               habit,
               logsByHabit.get(habit.id) ?? [],
+              daysByHabit.get(habit.id) ?? [],
               today
             );
             const taskCount = habit.habit_tasks?.length ?? 0;

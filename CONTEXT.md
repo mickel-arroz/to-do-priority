@@ -45,8 +45,18 @@ Un hábito finito que ya alcanzó su objetivo o pasó su fecha de fin.
 _Avoid_: Hábito cerrado, hábito archivado
 
 **Racha**:
-Días consecutivos de cumplimiento de un hábito.
+Días consecutivos de cumplimiento de un hábito. Los días neutros no la rompen.
 _Avoid_: Cadena, streak, secuencia
+
+**Día fallado**:
+Un día en el que vencía alguna tarea vinculada al hábito y no todas quedaron
+cumplidas. Rompe la racha y, con castigo activo, resta progreso.
+_Avoid_: Día perdido, día rojo, missed
+
+**Día neutro**:
+Un día dentro del rango del hábito en el que no vencía ninguna tarea vinculada.
+No cuenta ni a favor ni en contra: el hábito no pedía nada ese día.
+_Avoid_: Día vacío, día libre, día sin datos
 
 ### Consejos
 

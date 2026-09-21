@@ -15,21 +15,23 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import { buildChartSeries } from "@/lib/habits";
+import { buildChartSeries, type HabitDueTask } from "@/lib/habits";
 import { useT } from "@/lib/i18n/locale-context";
 import type { Habit, HabitLog } from "@/lib/types";
 
 export function HabitCharts({
   habit,
   logs,
+  linkedTasks,
   today,
 }: {
   habit: Habit;
   logs: HabitLog[];
+  linkedTasks: HabitDueTask[];
   today: string;
 }) {
   const t = useT();
-  const { weekly, cumulative } = buildChartSeries(habit, logs, today);
+  const { weekly, cumulative } = buildChartSeries(habit, logs, linkedTasks, today);
 
   return (
     <div className="grid gap-4 lg:grid-cols-2" data-testid="habit-charts">
