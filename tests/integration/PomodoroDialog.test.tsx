@@ -96,3 +96,39 @@ describe("PomodoroDialog", () => {
     expect(screen.getByTestId("pomodoro-time")).toHaveTextContent("00:45");
   });
 });
+
+/** Minimiza el diálogo al widget, como al cerrarlo con el temporizador en marcha. */
+function Minimizer() {
+  const { closeDialog } = usePomodoroController();
+  return (
+    <button data-testid="minimize-pomodoro" onClick={closeDialog}>
+      minimize
+    </button>
+  );
+}
+
+describe("PomodoroWidget", () => {
+  const clearance = () =>
+    document.documentElement.style.getPropertyValue("--pomodoro-widget-clearance");
+
+  it("publica el hueco que ocupa abajo mientras está visible, para los toasts", () => {
+    const task = makeTask({ pomodoro_minutes: 1 });
+    renderWithProviders(
+      <PomodoroProvider>
+        <Opener task={task} />
+        <Minimizer />
+      </PomodoroProvider>
+    );
+    fireEvent.click(screen.getByTestId("open-pomodoro"));
+    fireEvent.click(screen.getByTestId("pomodoro-start"));
+    expect(clearance()).toBe("");
+
+    fireEvent.click(screen.getByTestId("minimize-pomodoro"));
+    expect(screen.getByTestId("pomodoro-widget")).toBeInTheDocument();
+    expect(clearance()).toMatch(/^\d+(\.\d+)?px$/);
+
+    fireEvent.click(screen.getByRole("button", { name: /cerrar|close/i }));
+    expect(screen.queryByTestId("pomodoro-widget")).not.toBeInTheDocument();
+    expect(clearance()).toBe("");
+  });
+});

@@ -6,6 +6,36 @@ import { formatCountdown } from "@/hooks/usePomodoro";
 import { useT } from "@/lib/i18n/locale-context";
 import { cn } from "@/lib/utils";
 
+/** Variable CSS en `<html>` con el hueco que ocupa el widget; la lee AppToaster. */
+export const POMODORO_CLEARANCE_VAR = "--pomodoro-widget-clearance";
+
+/**
+ * Publica en `<html>` cuánto ocupa el widget desde el borde inferior del
+ * viewport, para que los toasts de escritorio (abajo a la derecha, ver
+ * AppToaster) se apilen encima en vez de taparlo. Se borra al ocultarse.
+ *
+ * Es un ref callback con limpieza; vive fuera del componente para que sea la
+ * misma función en cada render (el contador re-renderiza cada segundo).
+ */
+function publishClearance(el: HTMLDivElement | null) {
+  if (!el) return;
+  const root = document.documentElement;
+  const update = () =>
+    root.style.setProperty(
+      POMODORO_CLEARANCE_VAR,
+      `${Math.max(0, window.innerHeight - el.getBoundingClientRect().top)}px`
+    );
+  update();
+  const observer = new ResizeObserver(update);
+  observer.observe(el);
+  window.addEventListener("resize", update);
+  return () => {
+    observer.disconnect();
+    window.removeEventListener("resize", update);
+    root.style.removeProperty(POMODORO_CLEARANCE_VAR);
+  };
+}
+
 /**
  * Persistent bottom-right pomodoro widget (push-notification style). Shows
  * while a session is active but the full dialog is minimized, so the countdown
@@ -33,6 +63,7 @@ export function PomodoroWidget() {
 
   return (
     <div
+      ref={publishClearance}
       data-testid="pomodoro-widget"
       className="fixed bottom-4 right-4 z-50 w-72 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border bg-card text-card-foreground shadow-lg ring-1 ring-foreground/10"
     >

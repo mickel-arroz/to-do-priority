@@ -14,11 +14,12 @@ if (typeof window !== "undefined") {
     dispatchEvent: vi.fn(),
   }));
 
-  window.ResizeObserver ??= vi.fn().mockImplementation(() => ({
-    observe: vi.fn(),
-    unobserve: vi.fn(),
-    disconnect: vi.fn(),
-  }));
+  // Clase y no arrow function: el código la instancia con `new`.
+  window.ResizeObserver ??= class {
+    observe = vi.fn();
+    unobserve = vi.fn();
+    disconnect = vi.fn();
+  };
 
   window.IntersectionObserver ??= vi.fn().mockImplementation(() => ({
     observe: vi.fn(),

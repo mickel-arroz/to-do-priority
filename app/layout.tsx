@@ -5,7 +5,7 @@ import { ThemeProvider } from "next-themes";
 import { PomodoroProvider } from "@/components/pomodoro/PomodoroProvider";
 import { ServiceWorkerRegistrar } from "@/components/pwa/ServiceWorkerRegistrar";
 import { GridPattern } from "@/components/ui/grid-pattern";
-import { Toaster } from "@/components/ui/sonner";
+import { AppToaster } from "@/components/layout/AppToaster";
 import { LocaleProvider } from "@/lib/i18n/locale-context";
 import { DEFAULT_LOCALE, isLocale, LOCALE_COOKIE } from "@/lib/i18n";
 import "./globals.css";
@@ -72,7 +72,7 @@ export default async function RootLayout({
               aria-hidden="true"
             />
             <PomodoroProvider>{children}</PomodoroProvider>
-            <Toaster position="top-center" richColors />
+            <AppToaster />
             <ServiceWorkerRegistrar />
           </LocaleProvider>
         </ThemeProvider>
