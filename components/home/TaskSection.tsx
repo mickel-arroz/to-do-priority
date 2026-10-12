@@ -15,14 +15,6 @@ type TaskSectionProps = {
   emptyMessage: string;
   /** Optional list accent color: tints the section background */
   accentColor?: string | null;
-  /** Rendered after the rows (even when count is 0), e.g. today's completed */
-  footer?: React.ReactNode;
-  /**
-   * Título del separador que abre el footer. Marca dónde acaban las filas de
-   * arriba y empiezan las de abajo, que es lo único que las distingue cuando
-   * van seguidas en la misma sección.
-   */
-  footerLabel?: string;
   /** Whether the accordion starts expanded (default true) */
   defaultOpen?: boolean;
   children: React.ReactNode;
@@ -40,8 +32,6 @@ export function TaskSection({
   count,
   emptyMessage,
   accentColor,
-  footer,
-  footerLabel,
   defaultOpen = true,
   children,
   className,
@@ -89,25 +79,6 @@ export function TaskSection({
             <EmptyState>{emptyMessage}</EmptyState>
           ) : (
             <div className="space-y-2">{children}</div>
-          )}
-          {footer && (
-            <div className="mt-2 space-y-2">
-              {/* Sólo separa si hay algo arriba de lo que separarlo */}
-              {footerLabel && count > 0 && (
-                <div
-                  className="flex items-center gap-2 pt-2"
-                  role="separator"
-                  aria-label={footerLabel}
-                >
-                  <span className="h-px flex-1 bg-border" />
-                  <span className="shrink-0 text-xs font-medium text-muted-foreground">
-                    {footerLabel}
-                  </span>
-                  <span className="h-px flex-1 bg-border" />
-                </div>
-              )}
-              {footer}
-            </div>
           )}
         </AccordionContent>
       </AccordionItem>

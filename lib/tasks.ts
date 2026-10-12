@@ -78,7 +78,7 @@ export function partitionTasks(
 }
 
 /**
- * Today's completed tasks for the bottom of the Pendientes section:
+ * Completed tasks of the user's day, for the Home "Completadas" section:
  * priority first, then completion order (earliest completion first).
  */
 export function sortCompletedToday(tasks: Task[]): Task[] {

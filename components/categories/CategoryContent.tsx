@@ -100,7 +100,7 @@ function CategoryView({ category }: CategoryContentProps) {
         </div>
       )}
 
-      <CompletedSection categoryId={category.id} />
+      <CompletedSection scope="recent" categoryId={category.id} />
 
       <CategoryFormDialog
         open={renameOpen}

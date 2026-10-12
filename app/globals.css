@@ -31,6 +31,8 @@
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
   --color-muted: var(--muted);
+  --color-done: var(--done);
+  --color-done-foreground: var(--done-foreground);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
@@ -80,6 +82,9 @@
   --secondary-foreground: oklch(0.33 0.013 285.805);
   --muted: oklch(0.945 0.002 286.375);
   --muted-foreground: oklch(0.5 0.016 285.938);
+  /* Filas de tareas completadas: apagadas pero legibles, con fondo opaco */
+  --done: var(--muted);
+  --done-foreground: var(--muted-foreground);
   --accent: oklch(0.93 0.03 196);
   --accent-foreground: oklch(0.45 0.09 196);
   --destructive: oklch(0.577 0.245 27.325);
@@ -139,6 +144,10 @@
   --secondary-foreground: oklch(0.967 0.001 286.375);
   --muted: oklch(0.274 0.006 286.033);
   --muted-foreground: oklch(0.705 0.015 286.067);
+  /* Un punto por encima de la tarjeta y con el texto más claro que el muted:
+     con el tachado y la opacidad, el muted se perdía sobre el fondo oscuro */
+  --done: oklch(0.255 0.008 286);
+  --done-foreground: oklch(0.8 0.01 286);
   --accent: oklch(0.32 0.06 200);
   --accent-foreground: oklch(0.85 0.09 196);
   --destructive: oklch(0.704 0.191 22.216);

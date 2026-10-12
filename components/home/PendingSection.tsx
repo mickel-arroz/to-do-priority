@@ -3,8 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { LayoutGrid, LayoutList } from "@/components/icons";
-import { CompletedTaskCard } from "@/components/tasks/CompletedTaskCard";
-import { CompletedTaskRow } from "@/components/tasks/CompletedTaskRow";
 import { PendingCards } from "@/components/tasks/PendingCards";
 import { TaskRows } from "@/components/tasks/TaskBoard";
 import { TaskSection } from "@/components/home/TaskSection";
@@ -18,7 +16,6 @@ const STORAGE_KEY = "home:pendingView";
 
 type PendingSectionProps = {
   pending: Task[];
-  completedToday: Task[];
   success: number;
   failure: number;
   done: number;
@@ -32,7 +29,6 @@ type PendingSectionProps = {
  */
 export function PendingSection({
   pending,
-  completedToday,
   success,
   failure,
   done,
@@ -76,20 +72,6 @@ export function PendingSection({
           </div>
           <ViewToggle value={view} onChange={changeView} />
         </div>
-      }
-      footerLabel={t.home.completed}
-      footer={
-        completedToday.length === 0 ? null : view === "cards" ? (
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {completedToday.map((task) => (
-              <CompletedTaskCard key={task.id} task={task} />
-            ))}
-          </div>
-        ) : (
-          completedToday.map((task) => (
-            <CompletedTaskRow key={task.id} task={task} />
-          ))
-        )
       }
     >
       <AnimatePresence mode="wait" initial={false}>

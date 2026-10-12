@@ -16,7 +16,7 @@ type TaskBoardContextValue = {
   today: string;
   /** Pending tasks, kept in client state so section moves are instant */
   tasks: Task[];
-  /** Tasks completed today (bottom of the Pendientes section) */
+  /** Tasks completed in the user's day (Home "Completadas" section) */
   completedToday: Task[];
   /** Bumps after every persisted change; the Completed section refetches on it */
   completedVersion: number;

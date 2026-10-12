@@ -85,11 +85,12 @@ function HomeSections({
 
       <PendingSection
         pending={pending}
-        completedToday={completedToday}
         success={success}
         failure={failure}
         done={done}
       />
+
+      <CompletedSection scope="userDay" categories={categories} />
 
       <TaskSection
         id="upcoming"
@@ -130,8 +131,6 @@ function HomeSections({
           </TaskSection>
         );
       })}
-
-      <CompletedSection showCategory defaultOpen={false} />
     </div>
   );
 }

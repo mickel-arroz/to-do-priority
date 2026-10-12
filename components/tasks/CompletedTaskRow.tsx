@@ -40,7 +40,7 @@ export function CompletedTaskRow({
   return (
     <div
       data-testid={`completed-row-${task.id}`}
-      className="relative flex items-center gap-3 rounded-lg border bg-muted py-3 pl-4 pr-3 text-muted-foreground"
+      className="relative flex items-center gap-3 rounded-lg border bg-done py-3 pl-4 pr-3 text-done-foreground"
     >
       {/* Priority side bar, dimmed to keep the completed row muted */}
       <div
@@ -55,11 +55,11 @@ export function CompletedTaskRow({
       <CompletedStatusMenu task={task} />
 
       <div className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-medium line-through decoration-muted-foreground/40">
+        <span className="block truncate text-sm font-medium line-through decoration-done-foreground/50">
           {task.title}
         </span>
-        <span className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
-          <PriorityTag priority={task.priority} className="opacity-70" />
+        <span className="mt-0.5 flex items-center gap-2 text-xs">
+          <PriorityTag priority={task.priority} className="opacity-80" />
           <span className="flex items-center gap-1">
             <CalendarDays className="size-3.5" />
             {format(parseDate(task.due_date), "d MMM", { locale: dateLocale })}
