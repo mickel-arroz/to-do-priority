@@ -18,6 +18,7 @@ import { HabitFormDialog } from "@/components/habits/HabitFormDialog";
 import { HabitProgressBar } from "@/components/habits/HabitProgressBar";
 import { StreakBadge } from "@/components/habits/StreakBadge";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { useRefreshOnRemoteChanges } from "@/components/sync/LiveSync";
 import { EmptyState } from "@/components/ui/empty-state";
 import { computeHabitProgress, groupTaskDaysByHabit } from "@/lib/habits";
 import type { LinkedTaskDay } from "@/lib/habits";
@@ -43,6 +44,7 @@ export function HabitsContent({
 }: HabitsContentProps) {
   const t = useT();
   const [formOpen, setFormOpen] = useState(false);
+  useRefreshOnRemoteChanges();
 
   const logsByHabit = new Map<string, HabitLog[]>();
   for (const log of logs) {

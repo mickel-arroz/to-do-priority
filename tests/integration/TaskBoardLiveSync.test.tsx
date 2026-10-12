@@ -6,9 +6,16 @@ import { HomeContent } from "@/components/home/HomeContent";
 import { PomodoroProvider } from "@/components/pomodoro/PomodoroProvider";
 import { LiveSyncProvider } from "@/components/sync/LiveSync";
 import { api } from "@/lib/api/client";
-import { createLiveSync, type ChangeNotice } from "@/lib/live-sync";
 import type { Category, Task } from "@/lib/types";
-import { deferred, makeTask, renderWithProviders, routerMock } from "./helpers";
+import {
+  deferred,
+  fakeLiveSync,
+  makeTask,
+  ME,
+  renderWithProviders,
+  routerMock,
+  settle,
+} from "./helpers";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => routerMock,
@@ -34,9 +41,6 @@ vi.mock("sonner", () => ({
 vi.mock("@/components/feedback/celebrate", () => ({ celebrate: vi.fn() }));
 
 const TODAY = "2026-10-12";
-const ME = "esta-pestaña";
-/** Corto para no esperar 300 ms por test; la agrupación ya tiene su test unitario. */
-const DEBOUNCE_MS = 30;
 
 const category: Category = {
   id: "c1",
@@ -50,23 +54,6 @@ const category: Category = {
 };
 
 type Completion = { task: Task; nextTask: Task | null };
-
-/** El módulo de sincronización real sobre un canal que el test controla. */
-function fakeLiveSync() {
-  const listeners = new Set<(notice: ChangeNotice) => void>();
-  const sync = createLiveSync({
-    clientId: ME,
-    debounceMs: DEBOUNCE_MS,
-    connect: (onNotice) => {
-      listeners.add(onNotice);
-      return () => listeners.delete(onNotice);
-    },
-  });
-  return {
-    sync,
-    emit: (origin: string) => listeners.forEach((l) => l({ origin })),
-  };
-}
 
 function renderHome(tasks: Task[]) {
   const live = fakeLiveSync();
@@ -89,8 +76,6 @@ function renderHome(tasks: Task[]) {
   return live;
 }
 
-/** Más que la ventana de agrupación, para que cualquier aviso ya haya salido. */
-const settle = () => new Promise((r) => setTimeout(r, DEBOUNCE_MS * 3));
 
 async function close(task: Task) {
   const row = screen.getByTestId(`task-row-${task.id}`);

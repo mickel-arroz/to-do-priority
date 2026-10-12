@@ -23,6 +23,7 @@ import { HabitCharts } from "@/components/habits/HabitCharts";
 import { HabitFormDialog } from "@/components/habits/HabitFormDialog";
 import { HabitProgressBar } from "@/components/habits/HabitProgressBar";
 import { StreakBadge } from "@/components/habits/StreakBadge";
+import { useRefreshOnRemoteChanges } from "@/components/sync/LiveSync";
 import type { Bilingual } from "@/lib/advice";
 import { notifyModalNavigation } from "@/hooks/useModalHistory";
 import { api } from "@/lib/api/client";
@@ -63,6 +64,7 @@ export function HabitDetailContent({
   const [editOpen, setEditOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  useRefreshOnRemoteChanges();
 
   const progress = computeHabitProgress(habit, logs, linkedTasks, today);
   const shownTasks = dedupeRecurrenceSeries(linkedTasks);

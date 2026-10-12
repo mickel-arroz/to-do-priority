@@ -10,12 +10,14 @@ import { CategoryColorIcon } from "@/components/categories/CategoryColorIcon";
 import { CategoryFormDialog } from "@/components/categories/CategoryFormDialog";
 import { PageHeader } from "@/components/layout/PageHeader";
 import type { SidebarCategory } from "@/components/layout/Sidebar";
+import { useRefreshOnRemoteChanges } from "@/components/sync/LiveSync";
 import { useT } from "@/lib/i18n/locale-context";
 
 /** Connector page: every list (General + custom) linking to its detail. */
 export function ListsContent({ categories }: { categories: SidebarCategory[] }) {
   const t = useT();
   const [formOpen, setFormOpen] = useState(false);
+  useRefreshOnRemoteChanges();
 
   return (
     <div className="space-y-6" data-testid="lists-page">

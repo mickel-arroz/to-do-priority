@@ -2,6 +2,7 @@ import { render } from "@testing-library/react";
 import { ThemeProvider } from "next-themes";
 import { vi } from "vitest";
 import type { Locale } from "@/lib/i18n";
+import { createLiveSync, type ChangeNotice } from "@/lib/live-sync";
 import { LocaleProvider } from "@/lib/i18n/locale-context";
 import type { Task } from "@/lib/types";
 
@@ -61,3 +62,28 @@ export function deferred<T>() {
   });
   return { promise, resolve, reject };
 }
+
+/** Identifica la pestaña del test en los avisos del doble de sincronización. */
+export const ME = "esta-pestaña";
+/** Corto para no esperar 300 ms por test; la agrupación ya tiene su test unitario. */
+export const DEBOUNCE_MS = 30;
+
+/** El módulo de sincronización real sobre un canal que el test controla. */
+export function fakeLiveSync() {
+  const listeners = new Set<(notice: ChangeNotice) => void>();
+  const sync = createLiveSync({
+    clientId: ME,
+    debounceMs: DEBOUNCE_MS,
+    connect: (onNotice) => {
+      listeners.add(onNotice);
+      return () => listeners.delete(onNotice);
+    },
+  });
+  return {
+    sync,
+    emit: (origin: string) => listeners.forEach((l) => l({ origin })),
+  };
+}
+
+/** Más que la ventana de agrupación, para que cualquier aviso ya haya salido. */
+export const settle = () => new Promise((r) => setTimeout(r, DEBOUNCE_MS * 3));
