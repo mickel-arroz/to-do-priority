@@ -40,6 +40,18 @@ const WEEKDAY_NAMES = [
   "saturday",
 ] as const;
 
+export type WeekdayName = (typeof WEEKDAY_NAMES)[number];
+
+/**
+ * Día de la semana de una fecha "yyyy-MM-dd", con los mismos nombres que
+ * `days`: así la IA cruza cada fecha con la semana tipo sin calcularlo ella,
+ * que es justo lo que suele hacer mal. En UTC para que la zona del servidor no
+ * mueva el día.
+ */
+export function weekdayName(date: string): WeekdayName {
+  return WEEKDAY_NAMES[new Date(`${date}T00:00:00Z`).getUTCDay()];
+}
+
 /** Bloque tal y como lo edita el formulario, sin id ni dueño todavía. */
 export type BusyBlockInput = {
   weekday: number;
@@ -49,7 +61,7 @@ export type BusyBlockInput = {
 
 export type AvailabilityDay = {
   weekday: Weekday;
-  day: (typeof WEEKDAY_NAMES)[number];
+  day: WeekdayName;
   /** Rangos "HH:mm-HH:mm" del día, en orden. */
   busy: string[];
   busyHours: number;

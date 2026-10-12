@@ -41,6 +41,19 @@ export const adviceSchema = {
 };
 
 /**
+ * Instrucciones del seguimiento del consejo anterior. Sólo entran cuando hay
+ * alguno: sin consejo anterior el prompt es el de siempre.
+ */
+const FOLLOW_UP_SECTION = `
+THE PREVIOUS ADVICE — this is not the first advice this user gets:
+- "previousAdvice" in the overview is the last home advice they received, in Spanish, with the date it was written. A habit that carries its own "previousAdvice" got that one, with its date. It is what YOU told them last time.
+- "sincePreviousAdvice" in the overview lists the titles of the tasks completed, failed and left overdue since that date. In a habit, it says how many of its days were completed and missed since its advice, and where its progress and streak stood back then.
+- Use them to judge whether the user followed the advice, then decide: insist, adjust or change approach. If they followed it, build on it and move to the next step. If they ignored it, ask yourself why before repeating it: maybe it was too big, badly timed or simply not what mattered, so adjust it or change approach instead of saying the same thing louder. If the situation changed, let it go.
+- Refer to the previous advice explicitly only when doing so adds something, such as recognising that they followed it or explaining why you now suggest something different. Most days it should just shape your thinking, unspoken.
+- It is not a list of banned phrases: you may come back to the same task or the same idea when it is still the right move, as long as the advice moves forward.
+`;
+
+/**
  * Plantilla única: instrucciones en inglés y salida bilingüe por texto, de
  * modo que cambiar el idioma de la app no obligue a volver a generar. Una sola
  * llamada devuelve el consejo de inicio y un consejo por hábito activo.
@@ -63,12 +76,22 @@ export function buildAdvicePrompt(payload: AdvicePayload): string {
         pendingTasks: h.pendingTasks,
         tasksDoneWell: h.completedTasks,
         tasksFailed: h.failedTasks,
+        // Sin consejo anterior los campos desaparecen del JSON, no van a null.
+        previousAdvice: h.previousAdvice ?? undefined,
+        sincePreviousAdvice: h.sincePreviousAdvice ?? undefined,
       })
     )
     .join("\n");
 
+  const hasPreviousAdvice =
+    payload.previousAdvice !== null ||
+    payload.habits.some((h) => h.previousAdvice !== null);
+
   const overview = JSON.stringify({
     today: payload.today,
+    todayWeekday: payload.todayWeekday,
+    previousAdvice: payload.previousAdvice ?? undefined,
+    sincePreviousAdvice: payload.sincePreviousAdvice ?? undefined,
     availability: payload.availability,
     pendingTasks: payload.pending,
     overdueInTheLast7Days: payload.overdueLastWeek,
@@ -111,7 +134,8 @@ THE TIME BUDGET — the user does NOT have 24 hours in a day, and advice that ig
 - When "configured" is false the user has told you nothing about their commitments. Work with roughly ${24 - SLEEP_HOURS - 1} to ${24 - SLEEP_HOURS} waking hours and say NOTHING about their schedule, their job or their blocks: you do not know them.
 - When "configured" is true, "days" carries their own busy time — hours already committed outside this app, such as a job or classes — as "busy" ranges in 24-hour local time, plus "busyHours" and "freeHours" (waking hours left once sleep and those blocks are gone). Weigh what you ask of them against the "freeHours" of the day the work actually falls on: a task due on a 3-hour day is a very different ask from the same task on a 12-hour day. When the load clearly exceeds the time left, say so plainly and help them move or cut something instead of proposing more.
 - Never suggest working inside a busy block or during sleep, never invent a commitment that is not in "days", and never read the numbers back as if they were a schedule you drew up for them.
-
+- "todayWeekday" and every "dueWeekday" use the same day names as "days": match a date to its day through them, never by working out the weekday yourself.
+${hasPreviousAdvice ? FOLLOW_UP_SECTION : ""}
 VOCABULARY — this product has a fixed glossary. Breaking it reads as a bug:
 - In Spanish call it "hábito", ALWAYS. NEVER "meta", "objetivo", "reto" or "desafío", not even as a synonym to avoid repetition.
 - In English call it "habit", ALWAYS. NEVER "goal", "challenge" or "target" for the habit itself. You may say "target" only for the numeric "target" field of a finite habit.

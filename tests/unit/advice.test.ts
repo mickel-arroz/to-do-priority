@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  ADVICE_MAX_ACTIVITY_TITLES,
   ADVICE_MAX_PENDING_TASKS,
   HABIT_DESCRIPTION_LIMIT,
   adviceWindowStart,
@@ -216,6 +217,7 @@ describe("buildAdvicePayload", () => {
         title: "Urgente",
         subtasks: [],
         dueDate: TODAY,
+        dueWeekday: "friday",
         priority: 1,
         pomodoroMinutes: null,
       },
@@ -223,6 +225,7 @@ describe("buildAdvicePayload", () => {
         title: "Menos urgente",
         subtasks: [],
         dueDate: TODAY,
+        dueWeekday: "friday",
         priority: 4,
         pomodoroMinutes: null,
       },
@@ -250,6 +253,153 @@ describe("buildAdvicePayload", () => {
   });
 });
 
+describe("weekdays", () => {
+  it("names the weekday of today and of every task due date", () => {
+    const payload = build({
+      habits: [habit({ id: "h1", habit_tasks: [{ task_id: "t1" }] })],
+      tasks: [
+        task({ id: "t1", due_date: "2026-08-17" }),
+        task({ id: "t2", due_date: "2026-08-16" }),
+      ],
+    });
+    expect(payload.todayWeekday).toBe("friday");
+    expect(
+      payload.pending.map((t) => [t.dueDate, t.dueWeekday]).sort()
+    ).toEqual([
+      ["2026-08-16", "sunday"],
+      ["2026-08-17", "monday"],
+    ]);
+    expect(payload.habits[0].pendingTasks[0].dueWeekday).toBe("monday");
+  });
+});
+
+describe("previous advice", () => {
+  const PREVIOUS = "2026-08-11";
+
+  it("is absent without a previous advice", () => {
+    const payload = build({ habits: [habit({ id: "h1" })] });
+    expect(payload.previousAdvice).toBeNull();
+    expect(payload.sincePreviousAdvice).toBeNull();
+    expect(payload.habits[0].previousAdvice).toBeNull();
+    expect(payload.habits[0].sincePreviousAdvice).toBeNull();
+  });
+
+  it("carries the previous home advice with its date", () => {
+    const payload = build({
+      previousAdvice: {
+        home: { text: "Empieza por el informe", date: PREVIOUS },
+        habits: {},
+      },
+    });
+    expect(payload.previousAdvice).toEqual({
+      text: "Empieza por el informe",
+      date: PREVIOUS,
+      weekday: "tuesday",
+    });
+  });
+
+  it("lists the titles completed, failed and overdue since that date", () => {
+    const payload = build({
+      previousAdvice: { home: { text: "x", date: PREVIOUS }, habits: {} },
+      tasks: [
+        task({ id: "1", title: "Hecha antes", status: "yes", completed_at: "2026-08-10T10:00:00Z" }),
+        task({ id: "2", title: "Hecha el mismo día", status: "yes", completed_at: "2026-08-11T20:00:00Z" }),
+        task({ id: "3", title: "Hecha ayer", status: "yes", completed_at: "2026-08-13T10:00:00Z" }),
+        task({ id: "4", title: "Fallada", status: "no", completed_at: "2026-08-12T10:00:00Z" }),
+        task({ id: "5", title: "Fallada antes", status: "no", completed_at: "2026-08-09T10:00:00Z" }),
+        task({ id: "6", title: "Vencida después", due_date: "2026-08-12" }),
+        task({ id: "7", title: "Vencida antes", due_date: "2026-08-10" }),
+        task({ id: "8", title: "Pendiente hoy", due_date: TODAY }),
+      ],
+    });
+    expect(payload.sincePreviousAdvice).toEqual({
+      since: PREVIOUS,
+      completed: ["Hecha ayer", "Hecha el mismo día"],
+      failed: ["Fallada"],
+      overdue: ["Vencida después"],
+    });
+  });
+
+  it("follows up on an old advice only over the last month", () => {
+    const payload = build({
+      previousAdvice: { home: { text: "x", date: "2026-01-01" }, habits: {} },
+      tasks: [
+        task({ id: "1", title: "Muy vieja", status: "yes", completed_at: "2026-03-01T10:00:00Z" }),
+        task({ id: "2", title: "Reciente", status: "yes", completed_at: "2026-08-01T10:00:00Z" }),
+      ],
+    });
+    expect(payload.previousAdvice?.date).toBe("2026-01-01");
+    expect(payload.sincePreviousAdvice?.since).toBe("2026-07-15");
+    expect(payload.sincePreviousAdvice?.completed).toEqual(["Reciente"]);
+  });
+
+  it("counts the advice day itself as after the advice", () => {
+    const payload = build({
+      previousAdvice: {
+        home: null,
+        habits: { h1: { text: "x", date: PREVIOUS } },
+      },
+      habits: [habit({ id: "h1" })],
+      logs: [log("h1", "2026-08-10"), log("h1", PREVIOUS)],
+    });
+    expect(payload.habits[0].sincePreviousAdvice).toEqual({
+      completedDays: 1,
+      missedDays: 0,
+      progressThen: 1,
+      streakThen: 1,
+    });
+  });
+
+  it("caps each activity list to the most recent titles", () => {
+    const tasks = Array.from({ length: ADVICE_MAX_ACTIVITY_TITLES + 5 }, (_, i) =>
+      task({
+        id: `${i}`,
+        title: `T${i}`,
+        status: "yes",
+        completed_at: `2026-08-12T10:${String(i).padStart(2, "0")}:00Z`,
+      })
+    );
+    const payload = build({
+      previousAdvice: { home: { text: "x", date: PREVIOUS }, habits: {} },
+      tasks,
+    });
+    const completed = payload.sincePreviousAdvice?.completed ?? [];
+    expect(completed).toHaveLength(ADVICE_MAX_ACTIVITY_TITLES);
+    expect(completed[0]).toBe(`T${ADVICE_MAX_ACTIVITY_TITLES + 4}`);
+  });
+
+  it("puts each habit's previous advice next to that habit, with its evolution since", () => {
+    const payload = build({
+      previousAdvice: {
+        home: null,
+        habits: { h1: { text: "Haz el primer paso", date: PREVIOUS } },
+      },
+      habits: [
+        habit({ id: "h1", habit_tasks: [{ task_id: "t1" }, { task_id: "t2" }] }),
+        habit({ id: "h2" }),
+      ],
+      tasks: [
+        task({ id: "t1", due_date: "2026-08-12", status: "no", completed_at: "2026-08-12T10:00:00Z" }),
+        task({ id: "t2", due_date: "2026-08-20" }),
+      ],
+      logs: [log("h1", "2026-08-09"), log("h1", "2026-08-10"), log("h1", "2026-08-13")],
+    });
+    const [h1, h2] = payload.habits;
+    expect(h1.previousAdvice).toEqual({ text: "Haz el primer paso", date: PREVIOUS });
+    expect(h1.sincePreviousAdvice).toEqual({
+      completedDays: 1,
+      missedDays: 1,
+      progressThen: 2,
+      streakThen: 2,
+    });
+    expect(h2.previousAdvice).toBeNull();
+    expect(h2.sincePreviousAdvice).toBeNull();
+    // Sin consejo de inicio anterior no hay actividad general que seguir
+    expect(payload.previousAdvice).toBeNull();
+    expect(payload.sincePreviousAdvice).toBeNull();
+  });
+});
+
 describe("pomodoro minutes", () => {
   it("carries the configured minutes and reads 0 as no timer, not as zero cost", () => {
     const payload = build({
@@ -269,6 +419,16 @@ describe("pomodoro minutes", () => {
 describe("adviceWindowStart", () => {
   it("marks the oldest day the payload still looks at", () => {
     expect(adviceWindowStart(TODAY)).toBe("2026-08-07");
+  });
+
+  it("reaches back to an older previous advice, never forward to a newer one", () => {
+    expect(adviceWindowStart(TODAY, "2026-07-30")).toBe("2026-07-30");
+    expect(adviceWindowStart(TODAY, "2026-08-12")).toBe("2026-08-07");
+    expect(adviceWindowStart(TODAY, null)).toBe("2026-08-07");
+  });
+
+  it("never reaches back further than the follow-up limit", () => {
+    expect(adviceWindowStart(TODAY, "2026-01-01")).toBe("2026-07-15");
   });
 
   it("matches the oldest task the payload actually keeps", () => {

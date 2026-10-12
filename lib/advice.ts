@@ -2,8 +2,10 @@ import { addDays } from "date-fns";
 import { z } from "zod";
 import {
   summarizeAvailability,
+  weekdayName,
   type AvailabilitySummary,
   type BusyBlockInput,
+  type WeekdayName,
 } from "@/lib/availability";
 import { computeHabitProgress } from "@/lib/habits";
 import type { Locale } from "@/lib/i18n";
@@ -26,13 +28,51 @@ export const ADVICE_MAX_PENDING_TASKS = 40;
 export const HABIT_DESCRIPTION_LIMIT = 500;
 /** Ventana, en días, hacia atrás (vencidas, completadas) y hacia delante (próximas). */
 export const ADVICE_WINDOW_DAYS = 7;
+/**
+ * Tope de títulos por lista en la actividad desde el consejo anterior: si el
+ * usuario lleva semanas sin entrar, basta con lo más reciente para juzgar si
+ * siguió el consejo.
+ */
+export const ADVICE_MAX_ACTIVITY_TITLES = 20;
+/**
+ * Hasta dónde se mira hacia atrás la actividad desde el consejo anterior. Un
+ * usuario que vuelve tras meses no necesita su historial entero: basta con el
+ * último mes, y la query no crece sin límite.
+ */
+export const ADVICE_MAX_FOLLOW_UP_DAYS = 30;
 
 export type AdviceTaskSummary = {
   title: string;
   priority: Priority;
   dueDate: string;
+  dueWeekday: WeekdayName;
   /** Minutos de pomodoro configurados, o null si la tarea no lo usa. */
   pomodoroMinutes: number | null;
+};
+
+/** Un consejo ya guardado, en español, con el día del usuario en que se generó. */
+export type PreviousAdvice = { text: string; date: string };
+
+/**
+ * Lo que el usuario hizo desde el consejo de inicio anterior, para que la IA
+ * juzgue si lo siguió. Títulos, no conteos: el consejo nombraba tareas.
+ */
+export type AdviceActivitySince = {
+  since: string;
+  /** Lo más reciente primero, recortado a ADVICE_MAX_ACTIVITY_TITLES. */
+  completed: string[];
+  failed: string[];
+  /** Pendientes cuyo vencimiento cayó desde entonces y antes de hoy. */
+  overdue: string[];
+};
+
+/** Cómo se movió un hábito desde su consejo anterior. */
+export type AdviceHabitEvolution = {
+  completedDays: number;
+  missedDays: number;
+  /** Progreso y racha tal y como estaban el día del consejo anterior. */
+  progressThen: number;
+  streakThen: number;
 };
 
 /**
@@ -49,6 +89,7 @@ export type AdviceHabitTask = {
   /** Los pasos de la tarea, en orden: dicen en qué consiste el trabajo. */
   subtasks: { title: string; done: boolean }[];
   dueDate: string;
+  dueWeekday: WeekdayName;
   priority: Priority;
   /** Minutos de pomodoro configurados, o null si la tarea no lo usa. */
   pomodoroMinutes: number | null;
@@ -71,10 +112,17 @@ export type AdviceHabitSummary = {
   /** De lo ya resuelto sólo interesa cuánto salió bien y cuánto se falló. */
   completedTasks: number;
   failedTasks: number;
+  /** El último consejo de este hábito, o null si nunca tuvo. */
+  previousAdvice: PreviousAdvice | null;
+  sincePreviousAdvice: AdviceHabitEvolution | null;
 };
 
 export type AdvicePayload = {
   today: string;
+  todayWeekday: WeekdayName;
+  /** El último consejo de inicio, o null si nunca hubo: se genera como siempre. */
+  previousAdvice: (PreviousAdvice & { weekday: WeekdayName }) | null;
+  sincePreviousAdvice: AdviceActivitySince | null;
   /** Pendientes por prioridad, recortadas a ADVICE_MAX_PENDING_TASKS. */
   pending: AdviceTaskSummary[];
   /** Títulos de las vencidas cuyo vencimiento cae en los últimos 7 días. */
@@ -99,10 +147,26 @@ function shift(today: string, days: number): string {
 /**
  * Primer día de la ventana hacia atrás. Lo expone el núcleo para que la query
  * que alimenta la carga traiga exactamente lo que la carga mira, ni una fila
- * más: si la ventana cambia, cambian las dos a la vez.
+ * más: si la ventana cambia, cambian las dos a la vez. Un consejo anterior más
+ * viejo que la ventana la alarga hasta donde empieza su seguimiento.
  */
-export function adviceWindowStart(today: string): string {
-  return shift(today, -ADVICE_WINDOW_DAYS);
+export function adviceWindowStart(
+  today: string,
+  previousAdviceDate?: string | null
+): string {
+  const weekAgo = shift(today, -ADVICE_WINDOW_DAYS);
+  if (!previousAdviceDate) return weekAgo;
+  const followUp = followUpStart(today, previousAdviceDate);
+  return followUp < weekAgo ? followUp : weekAgo;
+}
+
+/**
+ * Desde qué día se cuenta la actividad que sigue a un consejo: su fecha, pero
+ * nunca más atrás de ADVICE_MAX_FOLLOW_UP_DAYS.
+ */
+function followUpStart(today: string, previousAdviceDate: string): string {
+  const limit = shift(today, -ADVICE_MAX_FOLLOW_UP_DAYS);
+  return previousAdviceDate < limit ? limit : previousAdviceDate;
 }
 
 /** Ids de las tareas vinculadas a algún hábito, sin repetir. */
@@ -133,8 +197,19 @@ export function buildAdvicePayload(input: {
   today: string;
   /** Tiempo ocupado de la semana tipo; ausente = disponibilidad sin configurar. */
   busyBlocks?: BusyBlockInput[];
+  /**
+   * Los consejos guardados antes de esta generación, leídos antes de
+   * sobrescribirlos. Ausente = primera generación del usuario.
+   */
+  previousAdvice?: {
+    home: PreviousAdvice | null;
+    /** Por id de hábito. */
+    habits: Record<string, PreviousAdvice>;
+  };
 }): AdvicePayload {
   const { tasks, habits, logs, today, busyBlocks } = input;
+  const previousHome = input.previousAdvice?.home ?? null;
+  const previousByHabit = input.previousAdvice?.habits ?? {};
   const weekAgo = adviceWindowStart(today);
   const weekAhead = shift(today, ADVICE_WINDOW_DAYS);
 
@@ -148,6 +223,30 @@ export function buildAdvicePayload(input: {
         t.completed_at !== null &&
         t.completed_at.slice(0, 10) >= weekAgo
     ).length;
+
+  // Lo resuelto desde una fecha, lo más reciente primero.
+  const resolvedSince = (status: TaskStatus, since: string) =>
+    tasks
+      .filter(
+        (t): t is Task & { completed_at: string } =>
+          t.status === status &&
+          t.completed_at !== null &&
+          t.completed_at.slice(0, 10) >= since
+      )
+      .sort((a, b) => b.completed_at.localeCompare(a.completed_at))
+      .slice(0, ADVICE_MAX_ACTIVITY_TITLES)
+      .map((t) => t.title);
+
+  const activitySince = (since: string): AdviceActivitySince => ({
+    since,
+    completed: resolvedSince("yes", since),
+    failed: resolvedSince("no", since),
+    overdue: open
+      .filter((t) => t.due_date >= since && t.due_date < today)
+      .sort((a, b) => b.due_date.localeCompare(a.due_date))
+      .slice(0, ADVICE_MAX_ACTIVITY_TITLES)
+      .map((t) => t.title),
+  });
 
   const logsByHabit = new Map<string, HabitLog[]>();
   for (const log of logs) {
@@ -164,6 +263,13 @@ export function buildAdvicePayload(input: {
 
   return {
     today,
+    todayWeekday: weekdayName(today),
+    previousAdvice: previousHome && {
+      ...previousHome,
+      weekday: weekdayName(previousHome.date),
+    },
+    sincePreviousAdvice:
+      previousHome && activitySince(followUpStart(today, previousHome.date)),
     availability: summarizeAvailability(busyBlocks ?? []),
     pending: sortByPriority(open)
       .slice(0, ADVICE_MAX_PENDING_TASKS)
@@ -171,6 +277,7 @@ export function buildAdvicePayload(input: {
         title: t.title,
         priority: t.priority,
         dueDate: t.due_date,
+        dueWeekday: weekdayName(t.due_date),
         pomodoroMinutes: pomodoroMinutes(t),
       })),
     overdueLastWeek: open
@@ -188,6 +295,19 @@ export function buildAdvicePayload(input: {
       .filter(({ h, logs, linked }) => !isFinishedHabit(h, logs, linked, today))
       .map(({ h, logs, linked }) => {
         const progress = computeHabitProgress(h, logs, linked, today);
+        const previous = previousByHabit[h.id] ?? null;
+        // El hábito tal y como estaba al llegar el consejo. El día del consejo
+        // cuenta entero como posterior: el consejo sale en la primera
+        // navegación, así que lo hecho ese día casi siempre vino después. Por
+        // eso se quitan sus logs, y como "hoy" tampoco cuenta como fallado.
+        const atPreviousAdvice =
+          previous &&
+          computeHabitProgress(
+            h,
+            logs.filter((l) => l.log_date < previous.date),
+            linked,
+            previous.date
+          );
         return {
           id: h.id,
           name: h.name,
@@ -208,11 +328,20 @@ export function buildAdvicePayload(input: {
               .sort((a, b) => a.position - b.position)
               .map((s) => ({ title: s.title, done: s.is_done })),
             dueDate: t.due_date,
+            dueWeekday: weekdayName(t.due_date),
             priority: t.priority,
             pomodoroMinutes: pomodoroMinutes(t),
           })),
           completedTasks: linked.filter((t) => t.status === "yes").length,
           failedTasks: linked.filter((t) => t.status === "no").length,
+          previousAdvice: previous,
+          sincePreviousAdvice: atPreviousAdvice && {
+            completedDays:
+              progress.completedDays - atPreviousAdvice.completedDays,
+            missedDays: progress.missedDays - atPreviousAdvice.missedDays,
+            progressThen: atPreviousAdvice.progress,
+            streakThen: atPreviousAdvice.currentStreak,
+          },
         };
       }),
   };

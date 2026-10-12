@@ -13,6 +13,8 @@ import { createAdviceProvider } from "@/lib/ai/provider";
 import { toBlockInputs } from "@/lib/availability";
 import type { BusyBlock, Habit, HabitLog, Task } from "@/lib/types";
 
+type HabitAdviceRow = { habit_id: string; advice_es: string; advice_date: string };
+
 /**
  * Generación diaria: una única petición *acertada* a la IA por usuario y por
  * día, de la que salen a la vez el consejo de inicio y los consejos de todos
@@ -34,7 +36,7 @@ export async function runDailyAdviceGeneration(
     // aquí y no se toca ninguna otra tabla.
     const { data: row, error: stateError } = await supabase
       .from("user_advice")
-      .select("last_attempt_date, last_advice_date, attempt_count")
+      .select("last_attempt_date, last_advice_date, attempt_count, home_advice_es")
       .maybeSingle();
 
     // Sin poder leer el estado no hay idempotencia posible, así que no se
@@ -53,22 +55,45 @@ export async function runDailyAdviceGeneration(
 
     if (!canAttemptAdviceToday(state, today)) return;
 
-    const [{ data: habits }, { data: logs }, { data: busyBlocks }] =
-      await Promise.all([
-        supabase.from("habits").select("*, habit_tasks(task_id)"),
-        supabase.from("habit_logs").select("*"),
-        // Sin disponibilidad configurada esto viene vacío y la carga cae al
-        // caso por defecto, así que un fallo aquí no impide aconsejar.
-        supabase.from("busy_blocks").select("*"),
-      ]);
+    const [
+      { data: habits },
+      { data: logs },
+      { data: busyBlocks },
+      { data: habitAdvice },
+    ] = await Promise.all([
+      supabase.from("habits").select("*, habit_tasks(task_id)"),
+      supabase.from("habit_logs").select("*"),
+      // Sin disponibilidad configurada esto viene vacío y la carga cae al
+      // caso por defecto, así que un fallo aquí no impide aconsejar.
+      supabase.from("busy_blocks").select("*"),
+      // Los consejos de hábito que esta generación va a sobrescribir. Un fallo
+      // aquí sólo quita el seguimiento: se aconseja como la primera vez.
+      supabase.from("habit_advice").select("habit_id, advice_es, advice_date"),
+    ]);
+
+    // El consejo anterior se lee antes de sobrescribirlo y sólo en español:
+    // la IA lo juzga, no lo traduce.
+    const previousAdvice = {
+      home:
+        row?.home_advice_es && row.last_advice_date
+          ? { text: row.home_advice_es, date: row.last_advice_date }
+          : null,
+      habits: Object.fromEntries(
+        ((habitAdvice ?? []) as HabitAdviceRow[]).map((a) => [
+          a.habit_id,
+          { text: a.advice_es, date: a.advice_date },
+        ])
+      ),
+    };
 
     // Sólo las tareas que la carga mira: las pendientes, las resueltas dentro
-    // de la ventana y las vinculadas a un hábito, sin importar cuándo se
-    // resolvieron. Traer el historial entero no aportaría nada al prompt.
+    // de la ventana (alargada hasta el consejo anterior si es más viejo) y las
+    // vinculadas a un hábito, sin importar cuándo se resolvieron. Traer el
+    // historial entero no aportaría nada al prompt.
     const linked = linkedTaskIds((habits ?? []) as Habit[]);
     const filters = [
       "status.eq.pending",
-      `completed_at.gte.${adviceWindowStart(today)}`,
+      `completed_at.gte.${adviceWindowStart(today, previousAdvice.home?.date)}`,
     ];
     if (linked.length > 0) filters.push(`id.in.(${linked.join(",")})`);
 
@@ -83,6 +108,7 @@ export async function runDailyAdviceGeneration(
       habits: (habits ?? []) as Habit[],
       logs: (logs ?? []) as HabitLog[],
       busyBlocks: toBlockInputs((busyBlocks ?? []) as BusyBlock[]),
+      previousAdvice,
       today,
     });
 
