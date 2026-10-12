@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { isUnauthorized, jsonError, requireUser } from "@/app/api/_lib/auth";
+import { notifyChange } from "@/app/api/_lib/live-sync";
 
 const MAX_SIZE = 5 * 1024 * 1024;
 const ALLOWED = ["image/jpeg", "image/png", "image/webp", "image/gif"];
@@ -56,6 +57,7 @@ export async function POST(
     .from("task-images")
     .createSignedUrl(storagePath, 3600);
 
+  await notifyChange(ctx, request);
   return NextResponse.json(
     { image: { ...data, signed_url: signed?.signedUrl } },
     { status: 201 }
@@ -88,5 +90,6 @@ export async function DELETE(
     .eq("id", imageId);
 
   if (error) return jsonError(error.message, 500);
+  await notifyChange(ctx, request);
   return NextResponse.json({ ok: true });
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isUnauthorized, jsonError, requireUser } from "@/app/api/_lib/auth";
+import { notifyChange } from "@/app/api/_lib/live-sync";
 import { syncHabitDaysForTask } from "@/app/api/_lib/habit-day";
 import type { Task } from "@/lib/types";
 
@@ -79,6 +80,7 @@ export async function POST(
       .single();
     if (error) return jsonError(error.message, 500);
     await syncHabitDaysForTask(ctx, id, days);
+    await notifyChange(ctx, request);
     return NextResponse.json({ task: updated });
   }
 
@@ -101,5 +103,6 @@ export async function POST(
   // sin restar ninguno de los ya ganados. El día que se revisa es el de
   // vencimiento de la tarea, no el de hoy.
   await syncHabitDaysForTask(ctx, id, [task.due_date]);
+  await notifyChange(ctx, request);
   return NextResponse.json({ task: updated });
 }

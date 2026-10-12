@@ -98,17 +98,44 @@ class Builder implements PromiseLike<{ data: unknown; error: null }> {
   }
 }
 
-export function fakeSupabase(resolve: Resolver = () => null) {
+/** Un aviso publicado por Realtime Broadcast desde la ruta. */
+export type FakeBroadcast = {
+  channel: string;
+  private: boolean;
+  event: string;
+  payload: unknown;
+};
+
+export function fakeSupabase(
+  resolve: Resolver = () => null,
+  { failBroadcast = false }: { failBroadcast?: boolean } = {}
+) {
   const ops: FakeOp[] = [];
+  const broadcasts: FakeBroadcast[] = [];
   const supabase = {
     from: (table: string) => new Builder(table, ops, resolve),
     storage: { from: () => ({ remove: async () => ({ data: null, error: null }) }) },
+    rpc: async () => ({ data: null, error: null }),
+    realtime: { setAuth: async () => {} },
+    channel: (name: string, opts?: { config?: { private?: boolean } }) => ({
+      httpSend: async (event: string, payload: unknown) => {
+        if (failBroadcast) throw new Error("realtime_down");
+        broadcasts.push({
+          channel: name,
+          private: opts?.config?.private ?? false,
+          event,
+          payload,
+        });
+        return { success: true };
+      },
+    }),
+    removeChannel: async () => "ok",
   };
   const ctx = {
     supabase,
     user: { id: "u1" },
   } as unknown as AuthContext;
-  return { ctx, ops };
+  return { ctx, ops, broadcasts };
 }
 
 /** Filtro `eq` de una operación, por nombre de columna. */

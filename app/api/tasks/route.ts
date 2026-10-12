@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { isUnauthorized, jsonError, requireUser } from "@/app/api/_lib/auth";
+import { notifyChange } from "@/app/api/_lib/live-sync";
 import { taskSchema, validationErrorResponse } from "@/app/api/_lib/schemas";
 
 export async function GET(request: Request) {
@@ -76,5 +77,6 @@ export async function POST(request: Request) {
     .eq("id", task.id)
     .single();
 
+  await notifyChange(ctx, request);
   return NextResponse.json({ task: full ?? task }, { status: 201 });
 }

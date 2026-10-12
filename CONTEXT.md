@@ -124,3 +124,16 @@ La fecha vigente en la zona horaria del usuario, no la del servidor. Es la unida
 decide si algo está vencido, si una racha sigue viva y si toca una nueva generación
 diaria.
 _Avoid_: Hoy, fecha del servidor, UTC
+
+### Sincronización
+
+**Aviso en vivo**:
+La señal sin datos que el servidor publica en el canal del usuario tras cada
+cambio, con sólo el identificador de la pestaña que lo hizo. Quien lo recibe
+vuelve a pedir sus datos; el aviso nunca los trae.
+_Avoid_: Notificación, evento, push, mensaje
+
+**Canal del usuario**:
+El canal privado de Supabase Realtime por el que viajan los avisos en vivo de un
+usuario. Sólo él puede escucharlo y publicar en él.
+_Avoid_: Sala, topic, socket

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isUnauthorized, jsonError, requireUser } from "@/app/api/_lib/auth";
+import { notifyChange } from "@/app/api/_lib/live-sync";
 import { validationErrorResponse } from "@/app/api/_lib/schemas";
 import { LIMITS } from "@/lib/limits";
 
@@ -46,5 +47,6 @@ export async function POST(request: Request) {
     if (error.code === "23505") return jsonError("name_taken", 409);
     return jsonError(error.message, 500);
   }
+  await notifyChange(ctx, request);
   return NextResponse.json({ category: data }, { status: 201 });
 }

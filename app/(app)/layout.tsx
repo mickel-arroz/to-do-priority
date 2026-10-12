@@ -59,6 +59,7 @@ export default async function AppLayout({
 
   return (
     <AppShell
+      userId={user.id}
       user={{
         name: profile?.full_name ?? user.email ?? "",
         email: user.email ?? "",

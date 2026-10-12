@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { isUnauthorized, jsonError, requireUser } from "@/app/api/_lib/auth";
+import { notifyChange } from "@/app/api/_lib/live-sync";
 import { busyBlocksSchema, validationErrorResponse } from "@/app/api/_lib/schemas";
 import { normalizeBusyBlocks } from "@/lib/availability";
 
@@ -39,5 +40,6 @@ export async function PUT(request: Request) {
   });
   if (error) return jsonError(error.message, 500);
 
+  await notifyChange(ctx, request);
   return NextResponse.json({ blocks });
 }

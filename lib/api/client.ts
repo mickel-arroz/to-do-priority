@@ -9,6 +9,7 @@ import type {
   Task,
   TaskImage,
 } from "@/lib/types";
+import { CLIENT_ID_HEADER, getTabClientId } from "@/lib/live-sync";
 import type { RecurrenceType } from "@/lib/recurrence";
 import type { BoardData, BoardScope } from "@/lib/task-board";
 
@@ -23,10 +24,24 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Toda petición que modifica algo lleva el `clientId` de la pestaña, para que
+ * el aviso en vivo que provoca no la haga refrescarse a sí misma (ADR 0010).
+ */
+function mutationHeaders(method: string | undefined): Record<string, string> {
+  return method && method !== "GET"
+    ? { [CLIENT_ID_HEADER]: getTabClientId() }
+    : {};
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
     ...init,
-    headers: { "Content-Type": "application/json", ...init?.headers },
+    headers: {
+      "Content-Type": "application/json",
+      ...mutationHeaders(init?.method),
+      ...init?.headers,
+    },
   });
   // En /api/auth/* un 401 significa "estas credenciales no valen", no "se
   // acabó la sesión": hay que devolverlo a quien llamó para poder pintar el
@@ -146,6 +161,7 @@ export const api = {
       const res = await fetch(`/api/tasks/${id}/images`, {
         method: "POST",
         body: form,
+        headers: mutationHeaders("POST"),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));

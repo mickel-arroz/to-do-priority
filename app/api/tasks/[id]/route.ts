@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { isUnauthorized, jsonError, requireUser } from "@/app/api/_lib/auth";
+import { notifyChange } from "@/app/api/_lib/live-sync";
 import {
   linkedHabitIds,
   syncHabitDays,
@@ -53,11 +54,12 @@ export async function PATCH(
     await syncHabitDaysForTask(ctx, id, [previousDueDate, taskInput.due_date]);
   }
 
+  await notifyChange(ctx, request);
   return NextResponse.json({ task: data });
 }
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const ctx = await requireUser();
@@ -88,5 +90,6 @@ export async function DELETE(
   if (habitIds.length > 0 && task?.due_date) {
     await syncHabitDays(ctx, habitIds, [task.due_date as string]);
   }
+  await notifyChange(ctx, request);
   return NextResponse.json({ ok: true });
 }

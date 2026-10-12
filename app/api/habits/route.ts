@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { isUnauthorized, jsonError, requireUser } from "@/app/api/_lib/auth";
+import { notifyChange } from "@/app/api/_lib/live-sync";
 import { dueDatesOf, syncHabitDays } from "@/app/api/_lib/habit-day";
 import { habitSchema, validationErrorResponse } from "@/app/api/_lib/schemas";
 
@@ -55,5 +56,6 @@ export async function POST(request: Request) {
   // principio, no sólo a partir del siguiente cambio de estado.
   await syncHabitDays(ctx, [habit.id], await dueDatesOf(ctx, task_ids));
 
+  await notifyChange(ctx, request);
   return NextResponse.json({ habit }, { status: 201 });
 }

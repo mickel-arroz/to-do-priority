@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { CategoryFormDialog } from "@/components/categories/CategoryFormDialog";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { MobileMenu } from "@/components/layout/MobileMenu";
@@ -10,22 +10,29 @@ import {
 } from "@/components/layout/PendingCounts";
 import { Sidebar, type SidebarCategory } from "@/components/layout/Sidebar";
 import type { UserInfo } from "@/components/layout/UserMenu";
+import { LiveSyncProvider } from "@/components/sync/LiveSync";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useT } from "@/lib/i18n/locale-context";
+import { createBrowserLiveSync } from "@/lib/live-sync-browser";
 import { notifyModalNavigation } from "@/hooks/useModalHistory";
 
 type AppShellProps = {
+  /** Whose live-sync channel this shell listens to */
+  userId: string;
   user: UserInfo;
   categories: SidebarCategory[];
   children: React.ReactNode;
 };
 
 export function AppShell({
+  userId,
   user,
   categories: serverCategories,
   children,
 }: AppShellProps) {
   const t = useT();
+  // One per user; it only connects once something subscribes, in the browser
+  const liveSync = useMemo(() => createBrowserLiveSync(userId), [userId]);
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -58,9 +65,11 @@ export function AppShell({
           bottom navbar (mobile) */}
       <main className="flex-1 pb-[var(--bottom-nav-h)] md:pb-0 md:pl-16">
         <div className="mx-auto w-full max-w-4xl px-4 py-6 md:px-8">
-          <PendingCountsProvider value={reportCounts}>
-            {children}
-          </PendingCountsProvider>
+          <LiveSyncProvider value={liveSync}>
+            <PendingCountsProvider value={reportCounts}>
+              {children}
+            </PendingCountsProvider>
+          </LiveSyncProvider>
         </div>
       </main>
 

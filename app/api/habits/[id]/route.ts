@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { isUnauthorized, jsonError, requireUser } from "@/app/api/_lib/auth";
+import { notifyChange } from "@/app/api/_lib/live-sync";
 import { dueDatesOf, syncHabitDays } from "@/app/api/_lib/habit-day";
 import { habitUpdateSchema, validationErrorResponse } from "@/app/api/_lib/schemas";
 
@@ -86,11 +87,12 @@ export async function PATCH(
     }
   }
 
+  await notifyChange(ctx, request);
   return NextResponse.json({ habit });
 }
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const ctx = await requireUser();
@@ -99,5 +101,6 @@ export async function DELETE(
   const { id } = await params;
   const { error } = await ctx.supabase.from("habits").delete().eq("id", id);
   if (error) return jsonError(error.message, 500);
+  await notifyChange(ctx, request);
   return NextResponse.json({ ok: true });
 }

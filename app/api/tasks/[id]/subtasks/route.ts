@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isUnauthorized, jsonError, requireUser } from "@/app/api/_lib/auth";
+import { notifyChange } from "@/app/api/_lib/live-sync";
 import { subtaskTitleSchema } from "@/app/api/_lib/schemas";
 import { LIMITS } from "@/lib/limits";
 
@@ -53,6 +54,7 @@ export async function POST(
     .single();
 
   if (error) return jsonError(error.message, 500);
+  await notifyChange(ctx, request);
   return NextResponse.json({ subtask: data }, { status: 201 });
 }
 
@@ -81,6 +83,7 @@ export async function PATCH(
     .single();
 
   if (error) return jsonError(error.message, 500);
+  await notifyChange(ctx, request);
   return NextResponse.json({ subtask: data });
 }
 
@@ -102,5 +105,6 @@ export async function DELETE(
     .eq("task_id", id);
 
   if (error) return jsonError(error.message, 500);
+  await notifyChange(ctx, request);
   return NextResponse.json({ ok: true });
 }

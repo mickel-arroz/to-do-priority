@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isUnauthorized, jsonError, requireUser } from "@/app/api/_lib/auth";
+import { notifyChange } from "@/app/api/_lib/live-sync";
 import { linkedHabitIds, syncHabitDays } from "@/app/api/_lib/habit-day";
 import { getNextDueDate } from "@/lib/recurrence";
 import type { Task } from "@/lib/types";
@@ -126,5 +127,6 @@ export async function POST(
     await syncHabitDays(ctx, habitIds, days);
   }
 
+  await notifyChange(ctx, request);
   return NextResponse.json({ task: updated, nextTask });
 }

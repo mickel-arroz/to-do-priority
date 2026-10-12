@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useRef, useState } from "react"
 import { toast } from "sonner";
 import { celebrate } from "@/components/feedback/celebrate";
 import { useReportPendingCounts } from "@/components/layout/PendingCounts";
+import { useRemoteChanges } from "@/components/sync/LiveSync";
 import { usePomodoroController } from "@/components/pomodoro/PomodoroProvider";
 import { TaskFormDialog } from "@/components/tasks/TaskFormDialog";
 import { TaskRow } from "@/components/tasks/TaskRow";
@@ -198,6 +199,13 @@ export function TaskBoard({
       });
   }, [categoryId, categories, reportPendingCounts]);
 
+  /** Refetches the list and, in a category, its Completed section. */
+  const refresh = useCallback(() => {
+    // A category's Completed refetch waits for empty queues too
+    setCompletedVersion((v) => v + 1);
+    reconcile();
+  }, [reconcile]);
+
   // Optimistic next instances live under a temporary id until the server
   // returns the real one. `aliases` maps a resolved temporary id to its real
   // id; `createdBy` maps each unresolved one to the task whose closing created
@@ -214,6 +222,15 @@ export function TaskBoard({
     (id: string) => aliases.current.get(id) ?? id,
     []
   );
+
+  // Another device or tab changed something, or the app came back into view:
+  // refetch the list, but only once every queue is empty so the response
+  // never overwrites optimistic moves still on their way (they refetch when
+  // they settle anyway).
+  useRemoteChanges(() => {
+    if (outstanding.current > 0) dirty.current = true;
+    else refresh();
+  });
 
   /** Puts a task in one list (and out of the other), under its current id. */
   const place = useCallback(
@@ -339,15 +356,11 @@ export function TaskBoard({
             lanes.current.delete(lane.key);
           }
           outstanding.current -= 1;
-          if (outstanding.current === 0 && dirty.current) {
-            // A category's Completed refetch waits for empty queues too
-            setCompletedVersion((v) => v + 1);
-            reconcile();
-          }
+          if (outstanding.current === 0 && dirty.current) refresh();
         });
       return lane;
     },
-    [canonical, discard, reconcile, t, unconfirmedFrom]
+    [canonical, discard, refresh, t, unconfirmedFrom]
   );
 
   const completeTask = useCallback(
