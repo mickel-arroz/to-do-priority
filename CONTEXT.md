@@ -23,6 +23,18 @@ Una tarea que el usuario cerró explícitamente como no cumplida, distinta de un
 simplemente venció sin tocarse.
 _Avoid_: Rechazada, cancelada
 
+**Tarea recurrente**:
+Una tarea con una regla de repetición (diaria, semanal, mensual, anual). Al cerrarla
+nace su siguiente instancia; la cadencia se cuenta desde la fecha de vencimiento
+original, no desde el día en que se cerró.
+_Avoid_: Tarea repetida, rutina
+
+**Siguiente instancia**:
+La tarea nueva que nace al cerrar una tarea recurrente, con la próxima fecha de
+vencimiento según su regla. Si el cierre se revierte, la siguiente instancia
+desaparece.
+_Avoid_: Copia, clon, repetición (como sustantivo)
+
 ### Hábitos
 
 **Hábito**:
@@ -75,6 +87,12 @@ _Avoid_: Consejo global, consejo genérico, consejo de home
 El consejo asociado a un hábito concreto, basado en sus métricas y en las tareas
 vinculadas a él.
 _Avoid_: Consejo personalizado, consejo de meta
+
+**Consejo anterior**:
+El último consejo que recibió el usuario antes de la generación diaria en curso. La
+IA lo usa para juzgar si el usuario lo siguió y decidir si insistir, ajustar o
+cambiar de enfoque; no es una lista de frases prohibidas.
+_Avoid_: Historial de consejos, consejo de ayer (puede ser de días atrás)
 
 **Frase motivacional**:
 Uno de los textos fijos que vienen escritos en el proyecto. No es un consejo: no lo
