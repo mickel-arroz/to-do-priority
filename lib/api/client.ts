@@ -10,6 +10,7 @@ import type {
   TaskImage,
 } from "@/lib/types";
 import type { RecurrenceType } from "@/lib/recurrence";
+import type { BoardData, BoardScope } from "@/lib/task-board";
 
 export class ApiError extends Error {
   constructor(
@@ -106,6 +107,13 @@ export const api = {
         `/api/tasks${query ? `?${query}` : ""}`
       );
     },
+    /** El listado de un TaskBoard, para reconciliar sin recargar la página. */
+    board: (scope: BoardScope) =>
+      request<BoardData>(
+        scope.kind === "home"
+          ? "/api/tasks/board?scope=home"
+          : `/api/tasks/board?scope=category&categoryId=${scope.categoryId}`
+      ),
     completed: (categoryId?: string) =>
       request<{ tasks: CompletedTask[] }>(
         `/api/tasks/completed${categoryId ? `?categoryId=${categoryId}` : ""}`

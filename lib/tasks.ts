@@ -1,3 +1,4 @@
+import { isWithinRange, type DayRange } from "@/lib/timezone";
 import type { Task, TaskCompletion } from "@/lib/types";
 
 /** Priority 1 first; ties broken by earlier due date, then title. */
@@ -88,14 +89,18 @@ export function sortCompletedToday(tasks: Task[]): Task[] {
   );
 }
 
-/** Stats for the Home progress bar: tasks finished today vs total for today. */
+/**
+ * Stats for the Home progress bar: tasks finished today vs total for today.
+ * `today` is the user's day as an instant range (ADR 0003): a completion
+ * stamped in UTC can't be matched by its date prefix.
+ */
 export function todayCompletionStats(
   pendingToday: Task[],
   completions: TaskCompletion[],
-  todayIso: string
+  today: DayRange
 ): { done: number; total: number; percent: number } {
   const done = completions.filter((c) =>
-    c.completed_at.startsWith(todayIso)
+    isWithinRange(c.completed_at, today)
   ).length;
   const total = pendingToday.length + done;
   return {

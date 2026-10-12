@@ -1,6 +1,6 @@
 import { cookies, headers } from "next/headers";
 import { getDayOfYear, parseISO } from "date-fns";
-import { resolveTimeZone, TZ_COOKIE } from "@/lib/timezone";
+import { resolveTimeZone, TZ_COOKIE, userDayRange } from "@/lib/timezone";
 
 /**
  * "Hoy" resuelto 100% en el servidor, en la zona horaria del usuario.
@@ -39,5 +39,12 @@ export async function getUserToday() {
     }).format(now)
   );
 
-  return { today, hour, dayOfYear: getDayOfYear(parseISO(today)), timeZone };
+  return {
+    today,
+    /** El día del usuario como rango de instantes, para "completadas hoy" */
+    todayRange: userDayRange(today, timeZone),
+    hour,
+    dayOfYear: getDayOfYear(parseISO(today)),
+    timeZone,
+  };
 }

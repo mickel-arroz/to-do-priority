@@ -4,8 +4,10 @@ import {
   partitionTasks,
   sortByDateAndPriority,
   sortByPriority,
+  todayCompletionStats,
 } from "@/lib/tasks";
-import type { Task } from "@/lib/types";
+import { userDayRange } from "@/lib/timezone";
+import type { Task, TaskCompletion } from "@/lib/types";
 
 let seq = 0;
 function task(partial: Partial<Task>): Task {
@@ -138,5 +140,30 @@ describe("dedupeRecurrenceSeries", () => {
     const a = task({ title: "Una" });
     const b = task({ title: "Otra" });
     expect(dedupeRecurrenceSeries([a, b])).toHaveLength(2);
+  });
+});
+
+describe("todayCompletionStats", () => {
+  const completion = (completed_at: string): TaskCompletion => ({
+    id: completed_at,
+    task_id: null,
+    title_snapshot: "x",
+    status: "yes",
+    due_date: "2026-10-12",
+    completed_at,
+  });
+
+  it("cuenta sólo lo cerrado dentro del día del usuario", () => {
+    const today = userDayRange("2026-10-12", "America/Caracas");
+    const stats = todayCompletionStats(
+      [task({ due_date: "2026-10-12" })],
+      [
+        completion("2026-10-12T01:00:00Z"), // 21:00 del 11 en Caracas
+        completion("2026-10-12T14:00:00Z"),
+        completion("2026-10-13T02:00:00Z"), // 22:00 del 12 en Caracas
+      ],
+      today
+    );
+    expect(stats).toEqual({ done: 2, total: 3, percent: 67 });
   });
 });

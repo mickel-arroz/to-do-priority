@@ -6,7 +6,7 @@ import type { AuthContext } from "@/app/api/_lib/auth";
  * `resolve` por test qué datos devuelve cada una.
  *
  * Sólo cubre la superficie encadenable que usan las rutas: from → select /
- * insert / update / upsert / delete → eq / in / gte / order / limit →
+ * insert / update / upsert / delete → eq / in / gte / lt / order / limit →
  * single / maybeSingle → await. Las columnas pedidas al `select` se ignoran:
  * el `resolve` decide la forma de lo que devuelve.
  */
@@ -14,7 +14,11 @@ export type FakeOp = {
   table: string;
   action: "select" | "insert" | "update" | "upsert" | "delete";
   payload?: unknown;
-  filters: Array<{ kind: "eq" | "in" | "gte"; column: string; value: unknown }>;
+  filters: Array<{
+    kind: "eq" | "in" | "gte" | "lt";
+    column: string;
+    value: unknown;
+  }>;
   single: boolean;
 };
 
@@ -65,6 +69,10 @@ class Builder implements PromiseLike<{ data: unknown; error: null }> {
     this.op.filters.push({ kind: "gte", column, value });
     return this;
   }
+  lt(column: string, value: unknown) {
+    this.op.filters.push({ kind: "lt", column, value });
+    return this;
+  }
   order() {
     return this;
   }
@@ -106,4 +114,44 @@ export function fakeSupabase(resolve: Resolver = () => null) {
 /** Filtro `eq` de una operación, por nombre de columna. */
 export function eqOf(op: FakeOp, column: string) {
   return op.filters.find((f) => f.kind === "eq" && f.column === column)?.value;
+}
+
+/** Instante de una marca ISO, o null si el valor no es una fecha con hora. */
+function instantOf(value: unknown): number | null {
+  if (typeof value !== "string" || !value.includes("T")) return null;
+  const t = Date.parse(value);
+  return Number.isNaN(t) ? null : t;
+}
+
+function compare(a: unknown, b: unknown): number {
+  const ta = instantOf(a);
+  const tb = instantOf(b);
+  if (ta !== null && tb !== null) return ta - tb;
+  return String(a).localeCompare(String(b));
+}
+
+/**
+ * Aplica los filtros de una operación a filas en memoria, para los tests que
+ * necesitan que el doble filtre como la base. Las marcas de tiempo se
+ * comparan como instantes, igual que `timestamptz`.
+ */
+export function applyFilters<T extends Record<string, unknown>>(
+  rows: T[],
+  op: FakeOp
+): T[] {
+  return rows.filter((row) =>
+    op.filters.every((f) => {
+      const value = row[f.column];
+      switch (f.kind) {
+        case "eq":
+          return value === f.value;
+        case "in":
+          return (f.value as unknown[]).includes(value);
+        case "gte":
+          return value != null && compare(value, f.value) >= 0;
+        case "lt":
+          return value != null && compare(value, f.value) < 0;
+      }
+    })
+  );
 }

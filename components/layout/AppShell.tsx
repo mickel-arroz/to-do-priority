@@ -1,9 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { CategoryFormDialog } from "@/components/categories/CategoryFormDialog";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { MobileMenu } from "@/components/layout/MobileMenu";
+import {
+  PendingCountsProvider,
+  type PendingCounts,
+} from "@/components/layout/PendingCounts";
 import { Sidebar, type SidebarCategory } from "@/components/layout/Sidebar";
 import type { UserInfo } from "@/components/layout/UserMenu";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -16,10 +20,31 @@ type AppShellProps = {
   children: React.ReactNode;
 };
 
-export function AppShell({ user, categories, children }: AppShellProps) {
+export function AppShell({
+  user,
+  categories: serverCategories,
+  children,
+}: AppShellProps) {
   const t = useT();
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  // Counts reported by a task board after it reconciles; dropped as soon as
+  // the layout renders again, since its counts are then just as fresh.
+  const [reported, setReported] = useState<PendingCounts>({});
+  const [prevServer, setPrevServer] = useState(serverCategories);
+  if (serverCategories !== prevServer) {
+    setPrevServer(serverCategories);
+    setReported({});
+  }
+  const reportCounts = useCallback(
+    (counts: PendingCounts) =>
+      setReported((prev) => ({ ...prev, ...counts })),
+    []
+  );
+  const categories = serverCategories.map((c) =>
+    c.id in reported ? { ...c, taskCount: reported[c.id] } : c
+  );
 
   return (
     <div className="flex min-h-dvh w-full flex-col">
@@ -32,7 +57,11 @@ export function AppShell({ user, categories, children }: AppShellProps) {
       {/* Content leaves room for the collapsed sidebar (desktop) and the
           bottom navbar (mobile) */}
       <main className="flex-1 pb-[var(--bottom-nav-h)] md:pb-0 md:pl-16">
-        <div className="mx-auto w-full max-w-4xl px-4 py-6 md:px-8">{children}</div>
+        <div className="mx-auto w-full max-w-4xl px-4 py-6 md:px-8">
+          <PendingCountsProvider value={reportCounts}>
+            {children}
+          </PendingCountsProvider>
+        </div>
       </main>
 
       {/* Mobile: bottom navbar; the menu is a sheet the button toggles

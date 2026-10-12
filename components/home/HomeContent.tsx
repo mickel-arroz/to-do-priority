@@ -34,6 +34,7 @@ type HomeContentProps = {
 export function HomeContent(props: HomeContentProps) {
   return (
     <TaskBoard
+      scope={{ kind: "home" }}
       categories={props.categories}
       today={props.today}
       initialTasks={props.tasks}

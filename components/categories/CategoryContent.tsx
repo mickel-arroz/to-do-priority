@@ -24,6 +24,7 @@ type CategoryContentProps = {
 export function CategoryContent(props: CategoryContentProps) {
   return (
     <TaskBoard
+      scope={{ kind: "category", categoryId: props.category.id }}
       categories={props.categories}
       today={props.today}
       initialTasks={props.tasks}
