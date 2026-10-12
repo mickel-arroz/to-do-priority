@@ -28,6 +28,12 @@ type TaskBoardContextValue = {
   openNewTask: (categoryId?: string) => void;
 };
 
+/** Where a task sat, and how, right before an action moved it. */
+type Placement = { list: "pending" | "completed"; task: Task };
+
+/** One task's action queue: its last action, a bump per failure, its length. */
+type Lane = { tail: Promise<void>; epoch: number; size: number };
+
 const TaskBoardContext = createContext<TaskBoardContextValue | null>(null);
 
 export function useTaskBoard() {
@@ -91,11 +97,13 @@ export function TaskBoard({
     });
   }
 
-  // Mutations still waiting on the server, and whether one succeeded since the
-  // list was last replaced. The list is only replaced once nothing is in
-  // flight, so a response never wipes out an optimistic move still pending;
-  // a dropped response leaves `dirty` set so the next settle refetches.
-  const inFlight = useRef(0);
+  // Actions not settled yet (queued or in flight), and whether one succeeded
+  // since the list was last replaced. The list is only replaced once every
+  // queue is empty, so a response never wipes out an optimistic move still
+  // pending; a dropped response leaves `dirty` set so the next settle
+  // refetches.
+  const outstanding = useRef(0);
+  const lanes = useRef(new Map<string, Lane>());
   const dirty = useRef(false);
   const reconcileSeq = useRef(0);
   const categoryId = scope.kind === "category" ? scope.categoryId : undefined;
@@ -109,7 +117,7 @@ export function TaskBoard({
       .then((data) => {
         // A newer reconcile or a new mutation makes this response stale
         if (seq !== reconcileSeq.current) return;
-        if (inFlight.current > 0) {
+        if (outstanding.current > 0) {
           dirty.current = true;
           return;
         }
@@ -133,21 +141,64 @@ export function TaskBoard({
       });
   }, [categoryId, categories, reportPendingCounts]);
 
-  /** Runs a mutation, reconciling the list once no other one is in flight. */
-  const track = useCallback(
-    <T,>(mutation: Promise<T>): Promise<T> => {
-      inFlight.current += 1;
-      return mutation
-        .then((result) => {
+  /** Puts a task back where it was before a failed action. */
+  const restore = useCallback((before: Placement) => {
+    const { task } = before;
+    setTasks((prev) => {
+      const rest = prev.filter((t2) => t2.id !== task.id);
+      return before.list === "pending" ? [...rest, task] : rest;
+    });
+    setCompletedToday((prev) => {
+      const rest = prev.filter((t2) => t2.id !== task.id);
+      return before.list === "completed" ? [...rest, task] : rest;
+    });
+  }, []);
+
+  /**
+   * Queues an action on a task, already applied optimistically. It reaches
+   * the server only once the previous action on that same task settled, so
+   * quick toggles land in order (completing a recurring task resyncs two
+   * habit days, ADR 0005); other tasks' queues run in parallel. If the server
+   * rejects it, the task goes back to `before` and whatever was queued behind
+   * it is dropped unsent, with a single toast. The list is reconciled once
+   * every queue is empty.
+   */
+  const enqueue = useCallback(
+    (before: Placement, send: () => Promise<unknown>) => {
+      const id = before.task.id;
+      const lane =
+        lanes.current.get(id) ?? { tail: Promise.resolve(), epoch: 0, size: 0 };
+      lanes.current.set(id, lane);
+      const epoch = lane.epoch;
+      lane.size += 1;
+      outstanding.current += 1;
+
+      lane.tail = lane.tail
+        .then(async () => {
+          // An earlier action on this task failed: this one was undone too
+          if (lane.epoch !== epoch) return;
+          try {
+            await send();
+          } catch {
+            lane.epoch += 1;
+            restore(before);
+            toast.error(t.common.error);
+          }
+          // Even a failed request may have reached the server: refetch
           dirty.current = true;
-          return result;
         })
         .finally(() => {
-          inFlight.current -= 1;
-          if (inFlight.current === 0 && dirty.current) reconcile();
+          lane.size -= 1;
+          if (lane.size === 0) lanes.current.delete(id);
+          outstanding.current -= 1;
+          if (outstanding.current === 0 && dirty.current) {
+            // A category's Completed refetch waits for empty queues too
+            setCompletedVersion((v) => v + 1);
+            reconcile();
+          }
         });
     },
-    [reconcile]
+    [reconcile, restore, t]
   );
 
   const completeTask = useCallback(
@@ -159,7 +210,10 @@ export function TaskBoard({
         completed_at: new Date().toISOString(),
       };
       setTasks((prev) => prev.filter((t2) => t2.id !== task.id));
-      setCompletedToday((prev) => [...prev, completed]);
+      setCompletedToday((prev) => [
+        ...prev.filter((t2) => t2.id !== task.id),
+        completed,
+      ]);
 
       if (status === "yes") {
         celebrate();
@@ -169,21 +223,15 @@ export function TaskBoard({
         toast(t.tasks.completedNo);
       }
 
-      track(api.tasks.complete(task.id, status))
-        .then(() => setCompletedVersion((v) => v + 1))
-        .catch(() => {
-          setTasks((prev) => [...prev, task]);
-          setCompletedToday((prev) => prev.filter((t2) => t2.id !== task.id));
-          toast.error(t.common.error);
-        });
+      enqueue({ list: "pending", task }, () =>
+        api.tasks.complete(task.id, status)
+      );
     },
-    [track, t]
+    [enqueue, t]
   );
 
   const changeTaskStatus = useCallback(
     (task: Task, status: TaskStatus) => {
-      const prevStatus = task.status;
-
       if (status === "pending") {
         // Instant revive into the pending list
         const revived: Task = { ...task, status: "pending", completed_at: null };
@@ -197,24 +245,11 @@ export function TaskBoard({
         );
       }
 
-      track(api.tasks.setStatus(task.id, status))
-        .then(() => setCompletedVersion((v) => v + 1))
-        .catch(() => {
-          // Roll back the optimistic move
-          if (status === "pending") {
-            setTasks((prev) => prev.filter((t2) => t2.id !== task.id));
-            setCompletedToday((prev) => [...prev, task]);
-          } else {
-            setCompletedToday((prev) =>
-              prev.map((t2) =>
-                t2.id === task.id ? { ...t2, status: prevStatus } : t2
-              )
-            );
-          }
-          toast.error(t.common.error);
-        });
+      enqueue({ list: "completed", task }, () =>
+        api.tasks.setStatus(task.id, status)
+      );
     },
-    [track, t]
+    [enqueue]
   );
 
   const openNewTask = useCallback((categoryId?: string) => {

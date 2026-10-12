@@ -50,3 +50,14 @@ export function makeTask(partial: Partial<Task> = {}): Task {
     ...partial,
   };
 }
+
+/** Una promesa que el test resuelve a mano, para ver el estado intermedio. */
+export function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}

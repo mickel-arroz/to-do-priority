@@ -7,7 +7,7 @@ import { PendingCountsProvider } from "@/components/layout/PendingCounts";
 import { PomodoroProvider } from "@/components/pomodoro/PomodoroProvider";
 import { api } from "@/lib/api/client";
 import type { Category, Task } from "@/lib/types";
-import { makeTask, renderWithProviders, routerMock } from "./helpers";
+import { deferred, makeTask, renderWithProviders, routerMock } from "./helpers";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => routerMock,
@@ -40,17 +40,6 @@ const category: Category = {
   color: null,
   created_at: "",
 };
-
-/** Una promesa que el test resuelve a mano, para ver el estado intermedio. */
-function deferred<T>() {
-  let resolve!: (value: T) => void;
-  let reject!: (reason: unknown) => void;
-  const promise = new Promise<T>((res, rej) => {
-    resolve = res;
-    reject = rej;
-  });
-  return { promise, resolve, reject };
-}
 
 function renderHome(tasks: Task[], reportCounts = vi.fn()) {
   return renderWithProviders(
