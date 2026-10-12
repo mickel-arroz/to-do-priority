@@ -2,48 +2,29 @@ import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import type { AdviceGeneration, AdviceProvider } from "@/lib/ai/provider";
 
 /**
- * Cascada de modelos, del mejor al más barato. Todos verificados contra la API
- * con la clave del proyecto: un id retirado no es gratis —gasta un viaje de ida
- * y vuelta— y si la cascada entera está retirada no queda nada que responda.
+ * Cascada de modelos del plan gratis, del más capaz al menos. Todos son ids
+ * vigentes: uno retirado no es gratis —gasta un viaje de ida y vuelta— y si la
+ * cascada entera está retirada no queda nada que responda. Por eso no está
+ * `gemini-3.7-flash`: está deprecado y la API lo redirige a `3.8`.
  *
- * El último no es un Gemini a propósito. La cuota no es una sola bolsa —medido:
- * `3.6-flash` y `3.5-flash` devolvían 429 mientras `3.1-flash-lite` seguía
- * respondiendo—, pero sí se agota por familia y de arriba abajo: los modelos
- * grandes caen primero y juntos. `gemma-4-31b-it` es de otra familia y de los
- * más estables medidos, así que sigue en pie cuando la de Gemini aprieta. Es la
- * red de seguridad, no una opción de calidad: sólo le llega el turno cuando
- * todo lo anterior falló.
+ * El último no es un Gemini a propósito. La cuota no es una sola bolsa, pero sí
+ * se agota por familia y de arriba abajo: los modelos grandes caen primero y
+ * juntos. `gemma-4-31b-it` es de otra familia y de los más estables medidos,
+ * así que sigue en pie cuando la de Gemini aprieta. Es la red de seguridad, no
+ * una opción de calidad: sólo le llega el turno cuando todo lo anterior falló.
  */
 const MODELS = [
+  "gemini-3.8-flash",
   "gemini-3.6-flash",
-  "gemini-3.5-flash",
-  "gemini-3.1-flash-lite",
+  "gemini-3.5-flash-lite",
   "gemma-4-31b-it",
 ];
 
-/** Un reintento inmediato por modelo: corremos dentro de una función serverless. */
-const ATTEMPTS_PER_MODEL = 2;
-
 /**
- * Presupuesto total de la cascada.
- *
- * La generación corre en `after()`, o sea dentro de la misma invocación que
- * renderiza la página (`maxDuration = 60`). Una llamada sin tope se lleva por
- * delante la respuesta entera con un FUNCTION_INVOCATION_TIMEOUT: ningún
- * consejo vale una página caída. Pasado el presupuesto se abandona el intento.
- *
- * Se reparte a razón de un `ATTEMPT_TIMEOUT_MS` por modelo, de modo que el
- * último de la cascada reciba su tope entero aunque todos los anteriores se
- * hayan agotado. Es la propiedad que importa: con el reparto anterior
- * (25 s totales, 10 s por intento) dos timeouts dejaban al último eslabón
- * corriendo con 5 s, y era ahí donde se perdía el día.
- *
- * De ahí que este número no se elija: es `MODELS.length * ATTEMPT_TIMEOUT_MS`,
- * y añadir un modelo obliga a recalcularlo. El techo es `maxDuration`, menos lo
- * que necesitan el render de la página, las lecturas que arman la carga y el
- * guardado posterior.
+ * Como mucho un reintento inmediato por modelo, y sólo ante fallos transitorios
+ * (red, 5xx, respuesta vacía): corremos dentro de una función serverless.
  */
-const TOTAL_BUDGET_MS = 48_000;
+const ATTEMPTS_PER_MODEL = 2;
 
 /**
  * Tope por intento. La latencia de los flash es bimodal —medida con el prompt
@@ -51,11 +32,35 @@ const TOTAL_BUDGET_MS = 48_000;
  * 35 s—, así que el tope no persigue la media sino que corta la cola larga sin
  * castigar a un modelo que hoy va lento.
  *
- * El suelo lo pone el más lento que aún merece la pena esperar: `3.5-flash`
- * ronda los 10,5 s de forma consistente y `gemma-4-31b-it` los 8. Bajar de 12 s
- * los dejaría fuera siempre.
+ * El suelo lo pone el más lento que aún merece la pena esperar:
+ * `gemma-4-31b-it`, el último respaldo, ronda los 8 s.
  */
 const ATTEMPT_TIMEOUT_MS = 12_000;
+
+/**
+ * Por debajo de esto un intento ya no cabe ni en la latencia típica (2–5 s):
+ * lanzarlo sólo gastaría cuota en una petición condenada al timeout. Afecta a
+ * los reintentos tardíos; el primer intento de cada modelo siempre lo supera.
+ */
+const MIN_ATTEMPT_MS = 4_000;
+
+/**
+ * Cada modelo tiene su franja de `ATTEMPT_TIMEOUT_MS`, y su plazo es el final
+ * de esa franja contado desde el arranque de la cascada. Los reintentos de un
+ * modelo sólo gastan su franja —más lo que les sobró a los anteriores—, nunca
+ * la de los que vienen detrás: así el último recibe su tope entero pase lo que
+ * pase antes, sean timeouts o 5xx lentos que se reintentan.
+ *
+ * El total es `MODELS.length * ATTEMPT_TIMEOUT_MS`. La generación corre
+ * en `after()`, dentro de la misma invocación que renderiza la página
+ * (`maxDuration = 60`): una llamada sin tope se lleva por delante la respuesta
+ * entera con un FUNCTION_INVOCATION_TIMEOUT, y ningún consejo vale una página
+ * caída. Lo que sobra hasta `maxDuration` es para el render, las lecturas que arman la carga
+ * y el guardado posterior; añadir un modelo o subir el tope obliga a revisarlo.
+ */
+function modelDeadline(start: number, index: number): number {
+  return start + (index + 1) * ATTEMPT_TIMEOUT_MS;
+}
 
 function errorMessage(err: unknown): string {
   return String((err as Error)?.message ?? err);
@@ -95,18 +100,18 @@ export function createGeminiProvider(): AdviceProvider {
       if (!apiKey) throw new Error("missing_gemini_api_key");
 
       const ai = new GoogleGenAI({ apiKey });
-      const deadline = Date.now() + TOTAL_BUDGET_MS;
+      const start = Date.now();
       const errors: string[] = [];
 
-      for (const model of MODELS) {
+      for (const [index, model] of MODELS.entries()) {
+        const deadline = modelDeadline(start, index);
         for (let attempt = 1; attempt <= ATTEMPTS_PER_MODEL; attempt++) {
-          // Lo que queda de presupuesto acota el intento: el último nunca puede
-          // pasarse del total, aunque su tope propio sea mayor.
+          // Lo que queda de la franja acota el intento: un reintento nunca se
+          // come el tiempo reservado a los modelos siguientes.
           const budget = Math.min(ATTEMPT_TIMEOUT_MS, deadline - Date.now());
-          if (budget <= 0) {
-            throw new Error(
-              `gemini_budget_exhausted: ${errors.join(" | ")}`
-            );
+          if (budget < MIN_ATTEMPT_MS) {
+            errors.push(`${model}#${attempt}: out_of_budget`);
+            break;
           }
 
           try {
