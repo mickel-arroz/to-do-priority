@@ -1,7 +1,7 @@
 // Generates PWA icons (PNG) and app sounds (WAV) without external deps.
 // Run: node scripts/generate-assets.mjs
 import { deflateSync } from "node:zlib";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 

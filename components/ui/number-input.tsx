@@ -32,10 +32,14 @@ export function NumberInput({
   const [text, setText] = React.useState(String(value));
   const [focused, setFocused] = React.useState(false);
 
-  // Mirror external value changes while the field is not being edited
-  React.useEffect(() => {
+  // Mirror external value changes while the field is not being edited.
+  // Derived state during render instead of an effect: no extra render pass.
+  // On blur the field already writes back the value it commits.
+  const [prevValue, setPrevValue] = React.useState(value);
+  if (value !== prevValue) {
+    setPrevValue(value);
     if (!focused) setText(String(value));
-  }, [value, focused]);
+  }
 
   return (
     <Input

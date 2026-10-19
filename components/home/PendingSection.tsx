@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { LayoutGrid, LayoutList } from "@/components/icons";
 import { PendingCards } from "@/components/tasks/PendingCards";
@@ -13,6 +13,30 @@ import { cn } from "@/lib/utils";
 
 type View = "list" | "cards";
 const STORAGE_KEY = "home:pendingView";
+/** Same-tab notice: the native "storage" event only fires in other tabs. */
+const VIEW_CHANGE_EVENT = "home:pendingView-change";
+
+/** Fallback when localStorage can't be written: the toggle still works this session. */
+let sessionView: View = "list";
+
+function readView(): View {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved === "list" || saved === "cards") return saved;
+  } catch {
+    // localStorage unavailable (private mode, etc.) — use this session's choice
+  }
+  return sessionView;
+}
+
+function subscribeView(onChange: () => void) {
+  window.addEventListener("storage", onChange);
+  window.addEventListener(VIEW_CHANGE_EVENT, onChange);
+  return () => {
+    window.removeEventListener("storage", onChange);
+    window.removeEventListener(VIEW_CHANGE_EVENT, onChange);
+  };
+}
 
 type PendingSectionProps = {
   pending: Task[];
@@ -34,25 +58,18 @@ export function PendingSection({
   done,
 }: PendingSectionProps) {
   const t = useT();
-  const [view, setView] = useState<View>("list");
-
-  // Load the saved preference after mount (avoids SSR/hydration mismatch)
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved === "list" || saved === "cards") setView(saved);
-    } catch {
-      // localStorage unavailable (private mode, etc.) — keep the default
-    }
-  }, []);
+  // The saved preference, read from localStorage. The server snapshot is the
+  // default, so hydration matches and the saved view applies right after.
+  const view = useSyncExternalStore(subscribeView, readView, () => "list" as View);
 
   const changeView = useCallback((next: View) => {
-    setView(next);
+    sessionView = next;
     try {
       localStorage.setItem(STORAGE_KEY, next);
     } catch {
       // ignore persistence failures
     }
+    window.dispatchEvent(new Event(VIEW_CHANGE_EVENT));
   }, []);
 
   return (
