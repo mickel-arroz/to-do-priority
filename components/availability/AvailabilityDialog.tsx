@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Copy, Plus, RotateCcw, X } from "@/components/icons";
+import { Copy, Minus, Moon, Plus, RotateCcw, X } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { FormFieldset, useLockedOpenChange } from "@/components/ui/busy";
 import {
@@ -24,11 +24,15 @@ import { Switch } from "@/components/ui/switch";
 import { api } from "@/lib/api/client";
 import { apiErrorMessage } from "@/lib/api/error-message";
 import {
+  DEFAULT_SLEEP_HOURS,
   MAX_BLOCKS_PER_DAY,
+  MAX_SLEEP_HOURS,
+  MIN_SLEEP_HOURS,
   MINUTES_IN_DAY,
   WEEK_ORDER,
   minutesToTime,
   normalizeBusyBlocks,
+  resolveSleepHours,
   timeToMinutes,
   type BusyBlockInput,
   type Weekday,
@@ -76,6 +80,21 @@ function toInputValue(minutes: number): string {
   return minutesToTime(minutes === MINUTES_IN_DAY ? 0 : minutes);
 }
 
+/**
+ * Lo que el usuario escribio en el campo de sueno, o null si no es un entero
+ * entre 0 y 24. El campo guarda texto y no un numero para dejarlo vaciar y
+ * reescribir sin que salte a 0 a mitad de la edicion.
+ */
+function parseSleepHours(value: string): number | null {
+  if (!/^\d{1,2}$/.test(value)) return null;
+  const hours = Number(value);
+  return hours >= MIN_SLEEP_HOURS && hours <= MAX_SLEEP_HOURS ? hours : null;
+}
+
+function clampSleepHours(hours: number): number {
+  return Math.min(MAX_SLEEP_HOURS, Math.max(MIN_SLEEP_HOURS, hours));
+}
+
 function busyHours(blocks: Draft[]): number {
   const minutes = blocks.reduce((total, b) => total + Math.max(0, b.end - b.start), 0);
   return Math.round((minutes / 60) * 10) / 10;
@@ -87,8 +106,9 @@ function busyHours(blocks: Draft[]): number {
  * consumidor es el prompt de la generacion diaria, que usa esas horas para no
  * aconsejar como si el dia entero estuviera libre.
  *
- * Se edita y se guarda la semana completa de una vez, asi que "Restablecer" es
- * simplemente vaciarla: sin bloques, el usuario esta disponible 24/7.
+ * Antes de la semana van las horas de sueno (0 a 24, 7 por defecto), que el
+ * prompt descuenta de cada dia. Todo se edita y se guarda de una vez, asi que
+ * "Restablecer" es vaciar la semana y volver a las 7 horas de sueno.
  */
 export function AvailabilityDialog({
   open,
@@ -99,6 +119,7 @@ export function AvailabilityDialog({
 }) {
   const t = useT();
   const [week, setWeek] = useState<Week>(emptyWeek);
+  const [sleepInput, setSleepInput] = useState(String(DEFAULT_SLEEP_HOURS));
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -110,6 +131,7 @@ export function AvailabilityDialog({
     if (open) {
       setLoading(true);
       setWeek(emptyWeek());
+      setSleepInput(String(DEFAULT_SLEEP_HOURS));
     }
   }
 
@@ -118,8 +140,10 @@ export function AvailabilityDialog({
     let cancelled = false;
     api.availability
       .get()
-      .then(({ blocks }) => {
+      .then(({ blocks, sleep_hours }) => {
         if (cancelled) return;
+        // Un servidor sin la migracion 0012 no manda el campo: se queda en 7.
+        setSleepInput(String(resolveSleepHours(sleep_hours)));
         setWeek(
           toWeek(
             blocks.map((b) => ({
@@ -171,16 +195,40 @@ export function AvailabilityDialog({
   // esta a medio escribirlo, asi que se marca el campo en vez de corregirlo por
   // su cuenta.
   const invalid = WEEK_ORDER.some((d) => week[d].some((b) => b.end <= b.start));
+  const sleepHours = parseSleepHours(sleepInput);
+  const sleepInvalid = sleepHours === null;
+
+  function stepSleep(delta: number) {
+    // Desde un campo vacio o invalido se parte del valor por defecto.
+    setSleepInput(String(clampSleepHours((sleepHours ?? DEFAULT_SLEEP_HOURS) + delta)));
+  }
+
+  function handleSleepChange(value: string) {
+    // Solo digitos y como mucho dos: lo demas ni se llega a escribir. El rango
+    // se valida aparte para poder marcar el campo en vez de corregirlo solo.
+    setSleepInput(value.replace(/\D/g, "").slice(0, 2));
+  }
+
+  function handleSleepKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+      e.preventDefault();
+      stepSleep(e.key === "ArrowUp" ? 1 : -1);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (sleepHours === null) {
+      toast.error(t.availability.invalidSleep);
+      return;
+    }
     if (invalid) {
       toast.error(t.availability.invalidRange);
       return;
     }
     setSaving(true);
     try {
-      await api.availability.save(normalizeBusyBlocks(toBlocks(week)));
+      await api.availability.save(normalizeBusyBlocks(toBlocks(week)), sleepHours);
       toast.success(t.availability.saved);
       onOpenChange(false);
     } catch (err) {
@@ -208,6 +256,71 @@ export function AvailabilityDialog({
         <form onSubmit={handleSubmit} className={DIALOG_COLUMN}>
           <FormFieldset busy={saving} className={DIALOG_COLUMN_PASSTHROUGH}>
             <DialogBody className="max-h-[52dvh] space-y-2 overflow-y-auto py-1 pr-1 max-sm:max-h-none">
+              {loading ? (
+                <Skeleton className="h-[74px] w-full" />
+              ) : (
+                <div
+                  data-testid="availability-sleep"
+                  className="rounded-lg border bg-card p-3"
+                >
+                  <div className="flex items-center gap-3">
+                    <Moon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                    <Label htmlFor="sleep-hours" className="flex-1">
+                      {t.availability.sleepLabel}
+                    </Label>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => stepSleep(-1)}
+                        disabled={sleepHours !== null && sleepHours <= MIN_SLEEP_HOURS}
+                        title={t.availability.sleepDecrease}
+                        aria-label={t.availability.sleepDecrease}
+                        className="rounded-md p-1.5 text-muted-foreground/70 transition-colors hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
+                      >
+                        <Minus className="size-4" />
+                      </button>
+                      <Input
+                        id="sleep-hours"
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        maxLength={2}
+                        autoComplete="off"
+                        required
+                        value={sleepInput}
+                        onChange={(e) => handleSleepChange(e.target.value)}
+                        onKeyDown={handleSleepKeyDown}
+                        aria-invalid={sleepInvalid}
+                        aria-describedby="sleep-hours-hint"
+                        className="w-12 bg-background text-center tabular-nums"
+                        data-testid="availability-sleep-input"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => stepSleep(1)}
+                        disabled={sleepHours !== null && sleepHours >= MAX_SLEEP_HOURS}
+                        title={t.availability.sleepIncrease}
+                        aria-label={t.availability.sleepIncrease}
+                        className="rounded-md p-1.5 text-muted-foreground/70 transition-colors hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
+                      >
+                        <Plus className="size-4" />
+                      </button>
+                      <span className="w-3 text-xs text-muted-foreground">
+                        {t.availability.sleepUnit}
+                      </span>
+                    </div>
+                  </div>
+                  <p
+                    id="sleep-hours-hint"
+                    className={cn(
+                      "mt-2 pl-7 text-xs",
+                      sleepInvalid ? "text-destructive" : "text-muted-foreground"
+                    )}
+                  >
+                    {sleepInvalid ? t.availability.invalidSleep : t.availability.sleepHint}
+                  </p>
+                </div>
+              )}
               {loading
                 ? WEEK_ORDER.map((d) => <Skeleton key={d} className="h-[46px] w-full" />)
                 : WEEK_ORDER.map((weekday) => {
@@ -334,7 +447,10 @@ export function AvailabilityDialog({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setWeek(emptyWeek())}
+                onClick={() => {
+                  setWeek(emptyWeek());
+                  setSleepInput(String(DEFAULT_SLEEP_HOURS));
+                }}
                 title={t.availability.resetHint}
                 disabled={loading}
                 data-testid="availability-reset"
@@ -345,7 +461,7 @@ export function AvailabilityDialog({
               <LoadingButton
                 type="submit"
                 loading={saving}
-                disabled={loading || invalid}
+                disabled={loading || invalid || sleepInvalid}
                 data-testid="availability-save"
               >
                 {t.common.save}

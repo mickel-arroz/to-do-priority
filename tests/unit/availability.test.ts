@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   MINUTES_IN_DAY,
-  SLEEP_HOURS,
+  DEFAULT_SLEEP_HOURS,
+  isValidSleepHours,
   minutesToTime,
   normalizeBusyBlocks,
+  resolveSleepHours,
   summarizeAvailability,
   timeToMinutes,
 } from "@/lib/availability";
@@ -78,7 +80,7 @@ describe("summarizeAvailability", () => {
     const summary = summarizeAvailability([]);
     expect(summary.configured).toBe(false);
     expect(summary.days).toEqual([]);
-    expect(summary.averageFreeHours).toBe(24 - SLEEP_HOURS);
+    expect(summary.averageFreeHours).toBe(24 - DEFAULT_SLEEP_HOURS);
   });
 
   it("discounts sleep and busy hours on the day they fall on", () => {
@@ -90,9 +92,9 @@ describe("summarizeAvailability", () => {
     expect(monday).toMatchObject({
       busy: ["09:00-17:00"],
       busyHours: 8,
-      freeHours: 24 - SLEEP_HOURS - 8,
+      freeHours: 24 - DEFAULT_SLEEP_HOURS - 8,
     });
-    expect(tuesday).toMatchObject({ busy: [], busyHours: 0, freeHours: 24 - SLEEP_HOURS });
+    expect(tuesday).toMatchObject({ busy: [], busyHours: 0, freeHours: 24 - DEFAULT_SLEEP_HOURS });
   });
 
   it("counts overlapping blocks once", () => {
@@ -119,5 +121,51 @@ describe("summarizeAvailability", () => {
       "saturday",
       "sunday",
     ]);
+  });
+});
+
+describe("sleep hours", () => {
+  it("accepts whole hours from 0 to 24, both included", () => {
+    expect(isValidSleepHours(0)).toBe(true);
+    expect(isValidSleepHours(7)).toBe(true);
+    expect(isValidSleepHours(24)).toBe(true);
+  });
+
+  it("rejects anything outside the range, fractional or not a number", () => {
+    for (const value of [-1, 25, 7.5, Number.NaN, "7", null, undefined]) {
+      expect(isValidSleepHours(value)).toBe(false);
+    }
+  });
+
+  it("falls back to 7 when the stored value is missing or invalid", () => {
+    expect(DEFAULT_SLEEP_HOURS).toBe(7);
+    expect(resolveSleepHours(undefined)).toBe(7);
+    expect(resolveSleepHours(null)).toBe(7);
+    expect(resolveSleepHours(30)).toBe(7);
+    expect(resolveSleepHours(9)).toBe(9);
+  });
+
+  it("discounts the user's own sleep hours from every day", () => {
+    const summary = summarizeAvailability([block(1, h(9), h(17))], 9);
+    expect(summary.sleepHours).toBe(9);
+    expect(summary.days.find((d) => d.day === "monday")?.freeHours).toBe(24 - 9 - 8);
+    expect(summary.days.find((d) => d.day === "tuesday")?.freeHours).toBe(24 - 9);
+  });
+
+  it("uses them even when no busy time is configured", () => {
+    const summary = summarizeAvailability([], 5);
+    expect(summary.configured).toBe(false);
+    expect(summary.sleepHours).toBe(5);
+    expect(summary.averageFreeHours).toBe(19);
+  });
+
+  it("leaves no free time when the whole day is sleep", () => {
+    const summary = summarizeAvailability([block(1, h(9), h(10))], 24);
+    expect(summary.days.every((d) => d.freeHours === 0)).toBe(true);
+    expect(summarizeAvailability([], 24).averageFreeHours).toBe(0);
+  });
+
+  it("ignores an invalid value instead of breaking the summary", () => {
+    expect(summarizeAvailability([], -3).sleepHours).toBe(7);
   });
 });

@@ -10,7 +10,7 @@ import {
 } from "@/lib/advice";
 import { adviceSchema, buildAdvicePrompt } from "@/lib/ai/advice-prompt";
 import { createAdviceProvider } from "@/lib/ai/provider";
-import { toBlockInputs } from "@/lib/availability";
+import { resolveSleepHours, toBlockInputs } from "@/lib/availability";
 import type { BusyBlock, Habit, HabitLog, Task } from "@/lib/types";
 
 type HabitAdviceRow = { habit_id: string; advice_es: string; advice_date: string };
@@ -60,6 +60,7 @@ export async function runDailyAdviceGeneration(
       { data: logs },
       { data: busyBlocks },
       { data: habitAdvice },
+      { data: profile },
     ] = await Promise.all([
       supabase.from("habits").select("*, habit_tasks(task_id)"),
       supabase.from("habit_logs").select("*"),
@@ -69,6 +70,9 @@ export async function runDailyAdviceGeneration(
       // Los consejos de hábito que esta generación va a sobrescribir. Un fallo
       // aquí sólo quita el seguimiento: se aconseja como la primera vez.
       supabase.from("habit_advice").select("habit_id, advice_es, advice_date"),
+      // Sólo el perfil propio es visible por RLS. Sin la migración 0012 la
+      // columna no existe, esto falla y se descuentan las 7 horas de siempre.
+      supabase.from("profiles").select("sleep_hours").maybeSingle(),
     ]);
 
     // El consejo anterior se lee antes de sobrescribirlo y sólo en español:
@@ -108,6 +112,9 @@ export async function runDailyAdviceGeneration(
       habits: (habits ?? []) as Habit[],
       logs: (logs ?? []) as HabitLog[],
       busyBlocks: toBlockInputs((busyBlocks ?? []) as BusyBlock[]),
+      sleepHours: resolveSleepHours(
+        (profile as { sleep_hours?: unknown } | null)?.sleep_hours
+      ),
       previousAdvice,
       today,
     });

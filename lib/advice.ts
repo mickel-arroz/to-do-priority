@@ -197,6 +197,8 @@ export function buildAdvicePayload(input: {
   today: string;
   /** Tiempo ocupado de la semana tipo; ausente = disponibilidad sin configurar. */
   busyBlocks?: BusyBlockInput[];
+  /** Horas de sueño del usuario; ausente = DEFAULT_SLEEP_HOURS. */
+  sleepHours?: number;
   /**
    * Los consejos guardados antes de esta generación, leídos antes de
    * sobrescribirlos. Ausente = primera generación del usuario.
@@ -207,7 +209,7 @@ export function buildAdvicePayload(input: {
     habits: Record<string, PreviousAdvice>;
   };
 }): AdvicePayload {
-  const { tasks, habits, logs, today, busyBlocks } = input;
+  const { tasks, habits, logs, today, busyBlocks, sleepHours } = input;
   const previousHome = input.previousAdvice?.home ?? null;
   const previousByHabit = input.previousAdvice?.habits ?? {};
   const weekAgo = adviceWindowStart(today);
@@ -270,7 +272,7 @@ export function buildAdvicePayload(input: {
     },
     sincePreviousAdvice:
       previousHome && activitySince(followUpStart(today, previousHome.date)),
-    availability: summarizeAvailability(busyBlocks ?? []),
+    availability: summarizeAvailability(busyBlocks ?? [], sleepHours),
     pending: sortByPriority(open)
       .slice(0, ADVICE_MAX_PENDING_TASKS)
       .map((t) => ({

@@ -57,6 +57,12 @@ function habitLines(text: string): Record<string, unknown>[] {
 }
 
 describe("buildAdvicePrompt", () => {
+  it("uses the user's own sleep hours in the time budget", () => {
+    const text = prompt({ sleepHours: 9 });
+    expect(text).toContain("sleeps about 9 hours");
+    expect(text).toContain("at most about 15 waking hours");
+    expect(prompt()).toContain("sleeps about 7 hours");
+  });
   it("dates today and every task with its weekday", () => {
     const text = prompt({ tasks: [task({ id: "1", due_date: "2026-08-17" })] });
     expect(text).toContain('"today":"2026-08-14"');

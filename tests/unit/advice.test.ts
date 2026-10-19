@@ -72,6 +72,12 @@ function build(input: Partial<Parameters<typeof buildAdvicePayload>[0]> = {}) {
 }
 
 describe("buildAdvicePayload", () => {
+  it("carries the user's sleep hours, 7 by default", () => {
+    expect(build().availability.sleepHours).toBe(7);
+    expect(build({ sleepHours: 6 }).availability.sleepHours).toBe(6);
+    expect(build({ sleepHours: 6 }).availability.averageFreeHours).toBe(18);
+  });
+
   it("carries the availability, configured or not", () => {
     expect(build().availability.configured).toBe(false);
     expect(

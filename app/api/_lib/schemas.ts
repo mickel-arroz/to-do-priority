@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { MAX_BLOCKS_PER_DAY, MINUTES_IN_DAY } from "@/lib/availability";
+import {
+  MAX_BLOCKS_PER_DAY,
+  MAX_SLEEP_HOURS,
+  MIN_SLEEP_HOURS,
+  MINUTES_IN_DAY,
+} from "@/lib/availability";
 import { LIMITS } from "@/lib/limits";
 
 /**
@@ -60,7 +65,10 @@ export const habitUpdateSchema = habitBaseSchema
 /**
  * La disponibilidad se guarda entera: el cuerpo trae la semana completa y
  * reemplaza a la anterior, así que una lista vacía es válida y significa
- * "disponible 24/7". Los solapes no se rechazan, se funden al normalizar.
+ * "sin tiempo ocupado". Los solapes no se rechazan, se funden al normalizar.
+ *
+ * `sleep_hours` es opcional para que un cliente anterior, que sólo manda los
+ * bloques, siga funcionando sin tocar las horas de sueño guardadas.
  */
 export const busyBlocksSchema = z.object({
   blocks: z
@@ -72,6 +80,7 @@ export const busyBlocksSchema = z.object({
       })
     )
     .max(MAX_BLOCKS_PER_DAY * 7),
+  sleep_hours: z.number().int().min(MIN_SLEEP_HOURS).max(MAX_SLEEP_HOURS).optional(),
 });
 
 /**

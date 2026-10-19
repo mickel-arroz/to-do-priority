@@ -212,13 +212,20 @@ export const api = {
       }),
   },
   availability: {
-    get: () => request<{ blocks: BusyBlock[] }>("/api/availability"),
-    /** Manda la semana entera; una lista vacía deja al usuario disponible 24/7. */
-    save: (blocks: BusyBlockInput[]) =>
-      request<{ blocks: BusyBlockInput[] }>("/api/availability", {
-        method: "PUT",
-        body: JSON.stringify({ blocks }),
-      }),
+    get: () =>
+      request<{ blocks: BusyBlock[]; sleep_hours: number }>("/api/availability"),
+    /**
+     * Manda la semana entera y las horas de sueño; una lista vacía deja al
+     * usuario sin tiempo ocupado.
+     */
+    save: (blocks: BusyBlockInput[], sleepHours: number) =>
+      request<{ blocks: BusyBlockInput[]; sleep_hours: number }>(
+        "/api/availability",
+        {
+          method: "PUT",
+          body: JSON.stringify({ blocks, sleep_hours: sleepHours }),
+        }
+      ),
   },
   habits: {
     list: () => request<{ habits: Habit[]; logs: HabitLog[] }>("/api/habits"),

@@ -115,8 +115,8 @@ _Avoid_: Agenda, horario, calendario, tiempo disponible
 
 **Disponibilidad**:
 Lo que le queda al usuario una vez descontados el sueño y su tiempo ocupado. Es
-el tiempo sobre el que la IA aconseja, y por eso nunca son 24 horas: sin nada
-configurado se asumen unas 16 o 17.
+el tiempo sobre el que la IA aconseja. El sueño son las horas que elige el
+usuario (0 a 24, 7 por defecto), así que sin tiempo ocupado se asumen unas 17.
 _Avoid_: Tiempo libre, capacidad, ancho de banda
 
 **Día del usuario**:

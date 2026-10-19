@@ -17,11 +17,37 @@ export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 export const MINUTES_IN_DAY = 1440;
 
 /**
- * Horas de sueño que el prompt descuenta SIEMPRE, haya o no disponibilidad
- * configurada. No es un dato del usuario: es el supuesto con el que se razona
- * su tiempo real, para que la IA nunca reparta 24 horas.
+ * Horas de sueño que se descuentan cuando el usuario no ha elegido las suyas.
+ * El sueño se descuenta SIEMPRE, haya o no tiempo ocupado configurado, para
+ * que la IA nunca reparta 24 horas.
  */
-export const SLEEP_HOURS = 7;
+export const DEFAULT_SLEEP_HOURS = 7;
+
+/**
+ * Rango de las horas de sueño. Se admite el día entero (24) aunque no sea lo
+ * normal: quien lo elige está diciendo que ese día no hay tiempo que aconsejar.
+ */
+export const MIN_SLEEP_HOURS = 0;
+export const MAX_SLEEP_HOURS = 24;
+
+/** Sólo horas enteras: el selector avanza de una en una. */
+export function isValidSleepHours(value: unknown): value is number {
+  return (
+    typeof value === "number" &&
+    Number.isInteger(value) &&
+    value >= MIN_SLEEP_HOURS &&
+    value <= MAX_SLEEP_HOURS
+  );
+}
+
+/**
+ * Las horas de sueño guardadas, o el valor por defecto si faltan o no son
+ * válidas: un perfil anterior a la columna, un null o basura caen al supuesto
+ * de siempre en vez de romper el resumen.
+ */
+export function resolveSleepHours(value: unknown): number {
+  return isValidSleepHours(value) ? value : DEFAULT_SLEEP_HOURS;
+}
 
 /** Tope de bloques por día: mantiene el formulario legible y la carga acotada. */
 export const MAX_BLOCKS_PER_DAY = 8;
@@ -70,8 +96,9 @@ export type AvailabilityDay = {
 };
 
 export type AvailabilitySummary = {
-  /** false = el usuario nunca configuró nada; se razona con el caso por defecto. */
+  /** false = el usuario no tiene tiempo ocupado; sólo se descuenta el sueño. */
   configured: boolean;
+  /** Las del usuario, o DEFAULT_SLEEP_HOURS si nunca las eligió. */
   sleepHours: number;
   /** Las 7 entradas, de lunes a domingo. Vacío cuando no hay nada configurado. */
   days: AvailabilityDay[];
@@ -160,15 +187,17 @@ function round1(value: number): number {
  * se lo cobra igual, lo cual tira a la baja y nunca promete tiempo de más.
  */
 export function summarizeAvailability(
-  blocks: BusyBlockInput[]
+  blocks: BusyBlockInput[],
+  sleepHours: number = DEFAULT_SLEEP_HOURS
 ): AvailabilitySummary {
   const normalized = normalizeBusyBlocks(blocks);
-  const wakingHours = 24 - SLEEP_HOURS;
+  const sleep = resolveSleepHours(sleepHours);
+  const wakingHours = 24 - sleep;
 
   if (normalized.length === 0) {
     return {
       configured: false,
-      sleepHours: SLEEP_HOURS,
+      sleepHours: sleep,
       days: [],
       averageFreeHours: wakingHours,
     };
@@ -194,7 +223,7 @@ export function summarizeAvailability(
 
   return {
     configured: true,
-    sleepHours: SLEEP_HOURS,
+    sleepHours: sleep,
     days,
     averageFreeHours: round1(
       days.reduce((total, d) => total + d.freeHours, 0) / days.length
