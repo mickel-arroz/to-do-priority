@@ -94,6 +94,26 @@ export function buildAdvicePrompt(payload: AdvicePayload): string {
     previousAdvice: payload.previousAdvice ?? undefined,
     sincePreviousAdvice: payload.sincePreviousAdvice ?? undefined,
     availability: payload.availability,
+    allHabits: payload.habitsOverview.map((h) => ({
+      name: h.name,
+      description: h.description,
+      status: h.status,
+      kind: h.isIndefinite ? "open-ended" : "finite",
+      startDate: h.startDate,
+      endDate: h.endDate ?? undefined,
+      progress: h.progress,
+      target: h.target,
+      progressPercent: h.percent ?? undefined,
+      completedDays: h.completedDays,
+      missedDays: h.missedDays,
+      currentStreak: h.currentStreak,
+      bestStreak: h.bestStreak,
+      completionRatePercent: h.completionRate,
+      tasksDoneWell: h.completedTasks,
+      tasksFailed: h.failedTasks,
+      tasksPending: h.pendingTasks,
+      recentWeeks: h.recentWeeks,
+    })),
     pendingTasks: payload.pending,
     overdueInTheLast7Days: payload.overdueLastWeek,
     dueInTheNext7Days: payload.dueNextWeek,
@@ -113,6 +133,7 @@ Always end on a single, specific action. Never a menu of options. Never a generi
 
 WRITE:
 1. "home": advice about the user's overall situation. Read the shape of the week: is the load too big, badly distributed, or concentrated in one priority or one deadline? A high failure count usually means over-commitment, not laziness — say so plainly and help them cut, sequence or reschedule. Weigh PRIORITY over volume. Pick at most ONE or TWO tasks by name, as the thread to pull, not as a list to recite.
+   Read "allHabits" in the overview too: EVERY habit the user has created, active or not. For each one you get its "name" and "description" (what the user wants to become), its "status" ("active" = still running, "completed" = reached its target, "ended" = its end date passed without reaching it), its statistics and "recentWeeks", which is what its charts show: days completed per week ("completedDays") and the cumulative progress at the close of each week ("progressAtEnd"), oldest first. Use them to read the user's whole trajectory together with their tasks: which habits they carry through and which they drop, whether recent weeks are rising or fading, whether what they want to become matches where their time actually goes, and whether a habit they already completed shows a pattern they can reuse. Weave in only what changes the advice — at most one habit observation — and never recite the list. This overview is for the home advice ONLY: it does not ask for any per-habit advice, and the "habits" output still covers exactly the ACTIVE HABITS listed at the end.
 2. "habits": one piece of advice per habit listed below, each carrying the exact "habitId" it belongs to. NEVER invent a habitId that is not in the input; NEVER repeat a habitId. Build each one from that habit's OWN material:
    - Its "name" and "description" say what the user is actually trying to become. Anchor the advice in that intent, not in generic habit theory.
    - "pendingTasks" is what is still open for this habit, each with its due date, priority and "subtasks": the ordered steps the task breaks down into, each flagged "done" or not. The steps are your best material — they say what the work actually involves. Point at the first step still not done inside the most important task, by name; never settle for "complete this task". If a task has no steps, work from its title and due date instead.

@@ -7,7 +7,7 @@ import {
   type BusyBlockInput,
   type WeekdayName,
 } from "@/lib/availability";
-import { computeHabitProgress } from "@/lib/habits";
+import { buildChartSeries, computeHabitProgress } from "@/lib/habits";
 import type { Locale } from "@/lib/i18n";
 import { formatDate, parseDate } from "@/lib/recurrence";
 import { sortByPriority } from "@/lib/tasks";
@@ -40,6 +40,14 @@ export const ADVICE_MAX_ACTIVITY_TITLES = 20;
  * último mes, y la query no crece sin límite.
  */
 export const ADVICE_MAX_FOLLOW_UP_DAYS = 30;
+/**
+ * Tope de hábitos, activos o terminados, que el consejo de inicio ve en su
+ * resumen de hábitos. Los activos van primero, así que el recorte sólo se
+ * lleva los terminados más viejos.
+ */
+export const ADVICE_MAX_OVERVIEW_HABITS = 30;
+/** Semanas de las gráficas de cada hábito que viajan resumidas al prompt. */
+export const ADVICE_CHART_WEEKS = 8;
 
 export type AdviceTaskSummary = {
   title: string;
@@ -117,6 +125,54 @@ export type AdviceHabitSummary = {
   sincePreviousAdvice: AdviceHabitEvolution | null;
 };
 
+/**
+ * Cómo está un hábito visto desde el consejo de inicio:
+ * - "active": sigue en curso.
+ * - "completed": alcanzó su objetivo.
+ * - "ended": su fecha de fin pasó sin alcanzarlo (o, si era abierto, sin más).
+ */
+export type AdviceHabitStatus = "active" | "completed" | "ended";
+
+/** Una semana de las gráficas del hábito: días cumplidos y progreso al cerrarla. */
+export type AdviceHabitWeek = {
+  /** Lunes de la semana, "yyyy-MM-dd". */
+  weekStart: string;
+  completedDays: number;
+  progressAtEnd: number;
+};
+
+/**
+ * Un hábito, activo o terminado, tal y como lo ve el consejo de inicio: su
+ * intención, si lo logró y lo que cuentan sus estadísticas y gráficas. No
+ * lleva id ni pasos de tareas: no es material para un consejo propio, que
+ * sigue saliendo de `habits`, sino contexto para leer la situación global.
+ */
+export type AdviceHabitOverview = {
+  name: string;
+  description: string | null;
+  status: AdviceHabitStatus;
+  isIndefinite: boolean;
+  startDate: string;
+  endDate: string | null;
+  progress: number;
+  target: number | null;
+  /** Progreso sobre el objetivo, o null si el hábito es abierto. */
+  percent: number | null;
+  completedDays: number;
+  missedDays: number;
+  currentStreak: number;
+  bestStreak: number;
+  completionRate: number;
+  completedTasks: number;
+  failedTasks: number;
+  pendingTasks: number;
+  /**
+   * Las últimas ADVICE_CHART_WEEKS semanas de sus gráficas (días cumplidos por
+   * semana y progreso acumulado), hasta hoy o hasta que el hábito terminó.
+   */
+  recentWeeks: AdviceHabitWeek[];
+};
+
 export type AdvicePayload = {
   today: string;
   todayWeekday: WeekdayName;
@@ -133,6 +189,11 @@ export type AdvicePayload = {
   failedLastWeek: number;
   /** Sólo hábitos activos: los terminados no consumen generaciones. */
   habits: AdviceHabitSummary[];
+  /**
+   * Todos los hábitos del usuario, activos y terminados, para el consejo de
+   * inicio. No genera consejos por hábito: ésos salen sólo de `habits`.
+   */
+  habitsOverview: AdviceHabitOverview[];
   /**
    * Tiempo del que el usuario dispone de verdad. Va siempre, configurado o no:
    * sin él la IA reparte 24 horas al día. Ver `lib/availability.ts`.
@@ -187,6 +248,97 @@ function isFinishedHabit(
 ): boolean {
   if (habit.end_date !== null && habit.end_date < today) return true;
   return computeHabitProgress(habit, logs, linked, today).isFinished;
+}
+
+/** Los activos primero y, dentro de cada grupo, los empezados más tarde. */
+function byOverviewRelevance(a: AdviceHabitOverview, b: AdviceHabitOverview): number {
+  const rank = (h: AdviceHabitOverview) => (h.status === "active" ? 0 : 1);
+  return rank(a) - rank(b) || b.startDate.localeCompare(a.startDate);
+}
+
+function summarizeHabitForOverview(
+  habit: Habit,
+  logs: HabitLog[],
+  linked: Task[],
+  today: string
+): AdviceHabitOverview {
+  const progress = computeHabitProgress(habit, logs, linked, today);
+  const ended = habit.end_date !== null && habit.end_date < today;
+  const status: AdviceHabitStatus = progress.isFinished
+    ? "completed"
+    : ended
+      ? "ended"
+      : "active";
+
+  // Las gráficas se leen hasta donde el hábito tuvo vida: un hábito que acabó
+  // hace meses no tiene nada que contar en las últimas semanas de hoy.
+  const { weekly, cumulative } = buildChartSeries(habit, logs, linked, today);
+  const lastLog = [...logs]
+    .map((l) => l.log_date)
+    .filter((d) => d <= today)
+    .sort()
+    .at(-1);
+  const until =
+    status === "ended"
+      ? (habit.end_date as string)
+      : status === "completed"
+        ? (lastLog ?? today)
+        : today;
+
+  return {
+    name: habit.name,
+    description: habit.description?.slice(0, HABIT_DESCRIPTION_LIMIT) ?? null,
+    status,
+    isIndefinite: progress.isIndefinite,
+    startDate: habit.start_date,
+    endDate: habit.end_date,
+    progress: progress.progress,
+    target: progress.target,
+    percent: progress.percent,
+    completedDays: progress.completedDays,
+    missedDays: progress.missedDays,
+    currentStreak: progress.currentStreak,
+    bestStreak: progress.bestStreak,
+    completionRate: progress.completionRate,
+    completedTasks: linked.filter((t) => t.status === "yes").length,
+    failedTasks: linked.filter((t) => t.status === "no").length,
+    pendingTasks: linked.filter((t) => t.status === "pending").length,
+    recentWeeks: recentChartWeeks(habit.start_date, until, weekly, cumulative),
+  };
+}
+
+/**
+ * Resume las dos gráficas del hábito en sus últimas semanas hasta `until`:
+ * cuántos días se cumplieron en cada una y dónde quedó el progreso acumulado
+ * al cerrarla. Las semanas sin días cumplidos van con 0, que también es dato.
+ */
+function recentChartWeeks(
+  startDate: string,
+  until: string,
+  weekly: { week: string; completed: number }[],
+  cumulative: { date: string; progress: number }[]
+): AdviceHabitWeek[] {
+  if (until < startDate) return [];
+  const completedByWeek = new Map(weekly.map((w) => [w.week, w.completed]));
+  const progressByDate = new Map(cumulative.map((p) => [p.date, p.progress]));
+  const end = parseDate(until);
+  const lastMonday = addDays(end, -((end.getDay() + 6) % 7));
+  const firstStart = parseDate(startDate);
+  const firstMonday = addDays(firstStart, -((firstStart.getDay() + 6) % 7));
+
+  const weeks: AdviceHabitWeek[] = [];
+  for (let i = ADVICE_CHART_WEEKS - 1; i >= 0; i--) {
+    const monday = addDays(lastMonday, -7 * i);
+    if (monday < firstMonday) continue;
+    const sunday = formatDate(addDays(monday, 6));
+    const closing = sunday < until ? sunday : until;
+    weeks.push({
+      weekStart: formatDate(monday),
+      completedDays: completedByWeek.get(formatDate(monday)) ?? 0,
+      progressAtEnd: progressByDate.get(closing) ?? progressByDate.get(until) ?? 0,
+    });
+  }
+  return weeks;
 }
 
 export function buildAdvicePayload(input: {
@@ -292,6 +444,12 @@ export function buildAdvicePayload(input: {
       .map((t) => t.title),
     completedLastWeek: resolvedInWindow("yes"),
     failedLastWeek: resolvedInWindow("no"),
+    habitsOverview: habits
+      .map((h) =>
+        summarizeHabitForOverview(h, logsByHabit.get(h.id) ?? [], linkedTo(h), today)
+      )
+      .sort(byOverviewRelevance)
+      .slice(0, ADVICE_MAX_OVERVIEW_HABITS),
     habits: habits
       .map((h) => ({ h, logs: logsByHabit.get(h.id) ?? [], linked: linkedTo(h) }))
       .filter(({ h, logs, linked }) => !isFinishedHabit(h, logs, linked, today))

@@ -56,12 +56,37 @@ function habitLines(text: string): Record<string, unknown>[] {
     .map((line) => JSON.parse(line));
 }
 
+/** El JSON del resumen del usuario, ya parseado. */
+function overview(text: string): Record<string, unknown> {
+  const line = text.split("\n").find((l) => l.startsWith('{"today"'));
+  return JSON.parse(line as string);
+}
+
 describe("buildAdvicePrompt", () => {
   it("uses the user's own sleep hours in the time budget", () => {
     const text = prompt({ sleepHours: 9 });
     expect(text).toContain("sleeps about 9 hours");
     expect(text).toContain("at most about 15 waking hours");
     expect(prompt()).toContain("sleeps about 7 hours");
+  });
+
+  it("gives the home advice every habit, active or finished, without ids", () => {
+    const text = prompt({
+      habits: [
+        habit({ id: "h1", name: "Leer", description: "Ser lector" }),
+        habit({ id: "h2", name: "Viejo", start_date: "2026-07-01", end_date: "2026-07-10" }),
+      ],
+    });
+    const all = overview(text).allHabits as Record<string, unknown>[];
+    expect(all.map((h) => [h.name, h.status])).toEqual([
+      ["Leer", "active"],
+      ["Viejo", "ended"],
+    ]);
+    expect(all[0]).toMatchObject({ description: "Ser lector", kind: "finite" });
+    expect(all[0]).toHaveProperty("recentWeeks");
+    expect(all[0]).not.toHaveProperty("habitId");
+    // El consejo por hábito sigue cubriendo sólo los activos.
+    expect(habitLines(text).map((h) => h.habitId)).toEqual(["h1"]);
   });
   it("dates today and every task with its weekday", () => {
     const text = prompt({ tasks: [task({ id: "1", due_date: "2026-08-17" })] });

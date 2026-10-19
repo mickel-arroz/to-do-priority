@@ -78,6 +78,58 @@ describe("buildAdvicePayload", () => {
     expect(build({ sleepHours: 6 }).availability.averageFreeHours).toBe(18);
   });
 
+  it("summarizes every habit for the home advice, finished ones included", () => {
+    const payload = build({
+      habits: [
+        habit({ id: "a", name: "Leer", description: "Ser lector", target_days: 30 }),
+        habit({ id: "done", name: "Correr", target_days: 2 }),
+        habit({
+          id: "old",
+          name: "Meditar",
+          start_date: "2026-07-01",
+          end_date: "2026-07-20",
+          target_days: null,
+        }),
+      ],
+      logs: [log("done", "2026-08-02"), log("done", "2026-08-03"), log("a", "2026-08-10")],
+    });
+
+    // Los consejos por hábito siguen saliendo sólo de los activos.
+    expect(payload.habits.map((h) => h.id)).toEqual(["a"]);
+
+    const byName = Object.fromEntries(payload.habitsOverview.map((h) => [h.name, h]));
+    expect(payload.habitsOverview).toHaveLength(3);
+    expect(payload.habitsOverview[0].name).toBe("Leer");
+    expect(byName.Leer).toMatchObject({
+      status: "active",
+      description: "Ser lector",
+      progress: 1,
+      target: 30,
+    });
+    expect(byName.Correr).toMatchObject({ status: "completed", progress: 2, percent: 100 });
+    expect(byName.Meditar.status).toBe("ended");
+  });
+
+  it("summarizes each habit's charts week by week, up to when it lived", () => {
+    const payload = build({
+      habits: [
+        habit({ id: "a", start_date: "2026-08-01" }),
+        habit({ id: "old", start_date: "2026-06-01", end_date: "2026-06-20", target_days: null }),
+      ],
+      logs: [log("a", "2026-08-03"), log("a", "2026-08-04"), log("a", "2026-08-11")],
+    });
+    const active = payload.habitsOverview.find((h) => h.name === "Habit a")!;
+    // 2026-08-01 cae en sábado: su semana empieza el lunes 27 de julio.
+    expect(active.recentWeeks).toEqual([
+      { weekStart: "2026-07-27", completedDays: 0, progressAtEnd: 0 },
+      { weekStart: "2026-08-03", completedDays: 2, progressAtEnd: 2 },
+      { weekStart: "2026-08-10", completedDays: 1, progressAtEnd: 3 },
+    ]);
+
+    const ended = payload.habitsOverview.find((h) => h.name === "Habit old")!;
+    expect(ended.recentWeeks.at(-1)?.weekStart).toBe("2026-06-15");
+  });
+
   it("carries the availability, configured or not", () => {
     expect(build().availability.configured).toBe(false);
     expect(
