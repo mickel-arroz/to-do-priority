@@ -24,8 +24,9 @@ cuando ve el panorama completo del usuario en el mismo prompt.
 
 ## Consequences
 
-Un consejo nuevo no aparece en la vista que lo disparó, sino en la siguiente navegación o
-recarga. Es deliberado: la página nunca espera a la IA ni muestra un estado de carga,
-sino el consejo anterior mientras tanto. Un hábito creado
+La página nunca espera a la IA ni muestra un estado de carga, sino el consejo anterior
+mientras tanto. Al guardar, la generación publica un aviso de consejo nuevo en el canal
+del usuario (ver ADR 0010) y las vistas que muestran consejos se refrescan solas, incluida
+la que la disparó. Antes el consejo nuevo esperaba a la siguiente navegación o recarga. Un hábito creado
 después de la generación del día no tiene consejo hasta mañana y muestra una frase
 motivacional mientras tanto.

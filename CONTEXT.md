@@ -128,10 +128,18 @@ _Avoid_: Hoy, fecha del servidor, UTC
 ### Sincronización
 
 **Aviso en vivo**:
-La señal sin datos que el servidor publica en el canal del usuario tras cada
-cambio, con sólo el identificador de la pestaña que lo hizo. Quien lo recibe
-vuelve a pedir sus datos; el aviso nunca los trae.
+La señal sin datos que el servidor publica en el canal del usuario. Quien lo
+recibe vuelve a pedir sus datos; el aviso nunca los trae. Hay dos clases: el
+aviso de cambio y el aviso de consejo nuevo.
 _Avoid_: Notificación, evento, push, mensaje
+
+**Aviso de cambio**:
+El aviso en vivo que sigue a cada cambio hecho por el usuario, con sólo el
+identificador de la pestaña que lo hizo, que lo ignora.
+
+**Aviso de consejo nuevo**:
+El aviso en vivo que sigue a una generación diaria que guardó consejos. No viene
+de ninguna pestaña, así que todas lo atienden, incluida la que la disparó.
 
 **Canal del usuario**:
 El canal privado de Supabase Realtime por el que viajan los avisos en vivo de un
