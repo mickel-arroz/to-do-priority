@@ -42,7 +42,6 @@ type PendingSectionProps = {
   pending: Task[];
   success: number;
   failure: number;
-  done: number;
 };
 
 /**
@@ -55,7 +54,6 @@ export function PendingSection({
   pending,
   success,
   failure,
-  done,
 }: PendingSectionProps) {
   const t = useT();
   // The saved preference, read from localStorage. The server snapshot is the
@@ -84,7 +82,7 @@ export function PendingSection({
             <TodayProgress
               success={success}
               failure={failure}
-              total={done + pending.length}
+              pending={pending.length}
             />
           </div>
           <ViewToggle value={view} onChange={changeView} />

@@ -65,7 +65,6 @@ function HomeSections({
 
   const { pending, upcoming } = partitionTasks(board.tasks, today);
   const completedToday = sortCompletedToday(board.completedToday);
-  const done = completedToday.length;
   const success = completedToday.filter((task) => task.status === "yes").length;
   const failure = completedToday.filter((task) => task.status === "no").length;
 
@@ -87,7 +86,6 @@ function HomeSections({
         pending={pending}
         success={success}
         failure={failure}
-        done={done}
       />
 
       <CompletedSection scope="userDay" categories={categories} />

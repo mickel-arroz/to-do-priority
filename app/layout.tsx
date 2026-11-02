@@ -5,6 +5,7 @@ import { ThemeProvider } from "next-themes";
 import { PomodoroProvider } from "@/components/pomodoro/PomodoroProvider";
 import { ServiceWorkerRegistrar } from "@/components/pwa/ServiceWorkerRegistrar";
 import { GridPattern } from "@/components/ui/grid-pattern";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppToaster } from "@/components/layout/AppToaster";
 import { LocaleProvider } from "@/lib/i18n/locale-context";
 import { DEFAULT_LOCALE, isLocale, LOCALE_COOKIE } from "@/lib/i18n";
@@ -71,7 +72,9 @@ export default async function RootLayout({
               className="fixed inset-0 -z-10 fill-foreground/[0.09] stroke-foreground/[0.09] [mask-image:radial-gradient(ellipse_at_center,white,transparent_70%)]"
               aria-hidden="true"
             />
-            <PomodoroProvider>{children}</PomodoroProvider>
+            <TooltipProvider>
+              <PomodoroProvider>{children}</PomodoroProvider>
+            </TooltipProvider>
             <AppToaster />
             <ServiceWorkerRegistrar />
           </LocaleProvider>

@@ -69,6 +69,11 @@ export const es: Dictionary = {
     pending: "Pendientes",
     upcoming: "Futuros",
     todayProgress: "completadas hoy",
+    progressCompleted: (n: number) =>
+      `${n} ${n === 1 ? "completada" : "completadas"}`,
+    progressFailed: (n: number) => `${n} ${n === 1 ? "fallada" : "falladas"}`,
+    progressPending: (n: number) =>
+      `${n} ${n === 1 ? "pendiente" : "pendientes"}`,
     viewList: "Vista de lista",
     viewCards: "Vista de tarjetas",
     emptyPending: "Nada pendiente hoy. ¡Disfrútalo!",
