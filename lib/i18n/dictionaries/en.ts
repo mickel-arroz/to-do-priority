@@ -14,6 +14,7 @@ export const en = {
     noResults: "No results found",
     optional: "optional",
     undo: "Undo",
+    itemLimitError: "exceeds the maximum number of items allowed",
   },
   nav: {
     home: "Home",

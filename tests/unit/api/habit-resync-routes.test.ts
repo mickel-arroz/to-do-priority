@@ -52,6 +52,10 @@ function req(body?: unknown) {
 
 const params = (id: string) => ({ params: Promise.resolve({ id }) });
 
+/** Un vínculo de hábito tal como lo lee el PATCH, con el estado de su tarea. */
+const pendingLink = (task_id: string) => ({ task_id, tasks: { status: "pending" } });
+const closedLink = (task_id: string) => ({ task_id, tasks: { status: "yes" } });
+
 function sortedDays(call: unknown[] | undefined, index: number) {
   return [...((call?.[index] as string[]) ?? [])].sort();
 }
@@ -209,7 +213,7 @@ describe("cambiar los vínculos de un hábito (PATCH /habits/[id])", () => {
     withDb((op) => {
       if (op.table === "habits") return { id: "h1" };
       if (op.table === "habit_tasks" && op.action === "select") {
-        return [{ task_id: UUID_T1 }, { task_id: UUID_T2 }];
+        return [pendingLink(UUID_T1), pendingLink(UUID_T2)];
       }
       if (op.table === "tasks" && op.action === "select") {
         requested = op.filters.find((f) => f.kind === "in")?.value as string[];
@@ -234,7 +238,7 @@ describe("cambiar los vínculos de un hábito (PATCH /habits/[id])", () => {
     withDb((op) => {
       if (op.table === "habits") return { id: "h1" };
       if (op.table === "habit_tasks" && op.action === "select") {
-        return [{ task_id: UUID_T1 }, { task_id: UUID_T2 }];
+        return [pendingLink(UUID_T1), pendingLink(UUID_T2)];
       }
       return null;
     });
@@ -249,6 +253,109 @@ describe("cambiar los vínculos de un hábito (PATCH /habits/[id])", () => {
     await patchHabit(req({ name: "Leer" }), params("h1"));
     expect(ops.filter((o) => o.table === "habit_tasks")).toHaveLength(0);
     expect(syncHabitDays).not.toHaveBeenCalled();
+  });
+
+  it("conserva los vínculos de las tareas ya cerradas aunque el cliente no los mande", async () => {
+    let requested: string[] = [];
+    const { ops } = withDb((op) => {
+      if (op.table === "habits") return { id: "h1" };
+      if (op.table === "habit_tasks" && op.action === "select") {
+        return [pendingLink(UUID_T1), closedLink(UUID_T2)];
+      }
+      if (op.table === "tasks" && op.action === "select") {
+        requested = op.filters.find((f) => f.kind === "in")?.value as string[];
+        return requested.map((id) => ({ due_date: dueDates[id] }));
+      }
+      return null;
+    });
+
+    const res = await patchHabit(req({ task_ids: [UUID_T3] }), params("h1"));
+    expect(res.status).toBe(200);
+
+    const links = ops.filter((o) => o.table === "habit_tasks");
+    const removed = links.find((o) => o.action === "delete");
+    expect(removed?.filters).toContainEqual({
+      kind: "in",
+      column: "task_id",
+      value: [UUID_T1],
+    });
+    const added = links.find((o) => o.action === "insert");
+    expect(added?.payload).toEqual([
+      { habit_id: "h1", task_id: UUID_T3, user_id: "u1" },
+    ]);
+    expect([...requested].sort()).toEqual([UUID_T1, UUID_T3]);
+  });
+
+  it("deja editar un hábito con más de 50 vínculos históricos", async () => {
+    const history = Array.from({ length: 60 }, (_, i) => closedLink(`old-${i}`));
+    const { ops } = withDb((op) => {
+      if (op.table === "habits") return { id: "h1" };
+      if (op.table === "habit_tasks" && op.action === "select") {
+        return [pendingLink(UUID_T1), ...history];
+      }
+      return null;
+    });
+
+    const res = await patchHabit(
+      req({ name: "Leer más", task_ids: [UUID_T1] }),
+      params("h1")
+    );
+    expect(res.status).toBe(200);
+
+    const writes = ops.filter(
+      (o) => o.table === "habit_tasks" && o.action !== "select"
+    );
+    expect(writes).toHaveLength(0);
+    expect(syncHabitDays).not.toHaveBeenCalled();
+  });
+
+  it("deja quitar todas las pendientes si el hábito conserva historial", async () => {
+    withDb((op) => {
+      if (op.table === "habits") return { id: "h1" };
+      if (op.table === "habit_tasks" && op.action === "select") {
+        return [pendingLink(UUID_T1), closedLink(UUID_T2)];
+      }
+      if (op.table === "tasks" && op.action === "select") {
+        return [{ due_date: dueDates[UUID_T1] }];
+      }
+      return null;
+    });
+
+    const res = await patchHabit(req({ task_ids: [] }), params("h1"));
+    expect(res.status).toBe(200);
+  });
+
+  it("rechaza dejar el hábito sin ningún vínculo, sin tocarlo", async () => {
+    const { ops } = withDb((op) => {
+      if (op.table === "habits") return { id: "h1" };
+      if (op.table === "habit_tasks" && op.action === "select") {
+        return [pendingLink(UUID_T1)];
+      }
+      return null;
+    });
+
+    const res = await patchHabit(
+      req({ name: "Leer", task_ids: [] }),
+      params("h1")
+    );
+    expect(res.status).toBe(400);
+    expect(ops.filter((o) => o.action !== "select")).toHaveLength(0);
+  });
+
+  it("un exceso de tareas vinculadas se informa como tope de elementos, no de caracteres", async () => {
+    withDb(() => null);
+    const ids = Array.from(
+      { length: 51 },
+      (_, i) => `00000000-0000-4000-8000-${String(i).padStart(12, "0")}`
+    );
+
+    const res = await patchHabit(req({ task_ids: ids }), params("h1"));
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({
+      error: "too_many",
+      field: "task_ids",
+      max: 50,
+    });
   });
 });
 

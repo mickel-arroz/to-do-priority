@@ -34,12 +34,15 @@ const EXPECTED: Record<string, keyof typeof LIMITS> = {
 
 /**
  * Lo que `LIMITS` guarda y no es un tope de longitud de texto, y por tanto no
- * le toca constraint de `length(...)`: `subtasksPerTask` cuenta filas, que en
- * la base pediría un trigger, no un check. Va nombrado uno a uno a propósito,
- * para que dejar un tope de texto sin constraint siga siendo imposible por
- * descuido.
+ * le toca constraint de `length(...)`: `subtasksPerTask` y `tasksPerHabit`
+ * cuentan filas, que en la base pediría un trigger, no un check. Va nombrado
+ * uno a uno a propósito, para que dejar un tope de texto sin constraint siga
+ * siendo imposible por descuido.
  */
-const NOT_A_TEXT_LENGTH: (keyof typeof LIMITS)[] = ["subtasksPerTask"];
+const NOT_A_TEXT_LENGTH: (keyof typeof LIMITS)[] = [
+  "subtasksPerTask",
+  "tasksPerHabit",
+];
 
 /** `add constraint <nombre> check (... <= 123)` -> { nombre: 123 } */
 function parseConstraints(sql: string): Record<string, number> {

@@ -16,4 +16,9 @@ export const LIMITS = {
    * is not a `length(...)` check. `taskSchema` and the form are what hold it.
    */
   subtasksPerTask: 50,
+  /**
+   * How many pending tasks one habit links at a time. Closed instances stay
+   * linked as the habit's history (ADR 0005, 0009) and don't count.
+   */
+  tasksPerHabit: 50,
 } as const;

@@ -16,6 +16,7 @@ export const es: Dictionary = {
     noResults: "No se encontraron resultados",
     optional: "opcional",
     undo: "Deshacer",
+    itemLimitError: "supera el máximo de elementos permitido",
   },
   nav: {
     home: "Inicio",

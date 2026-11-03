@@ -30,6 +30,20 @@ describe("apiErrorMessage", () => {
     expect(message).toContain(String(LIMITS.subtaskTitle));
   });
 
+  it("nombra la lista y el máximo de elementos, sin hablar de caracteres", () => {
+    const err = apiError({
+      error: "too_many",
+      field: "task_ids",
+      max: LIMITS.tasksPerHabit,
+    });
+    const message = apiErrorMessage(err, t);
+
+    expect(message).toContain(t.habits.linkedTasks);
+    expect(message).toContain(String(LIMITS.tasksPerHabit));
+    expect(message).toContain(t.common.itemLimitError);
+    expect(message).not.toContain(t.tasks.charLimitError);
+  });
+
   it("cae al mensaje genérico con un código que no conoce", () => {
     expect(apiErrorMessage(apiError({ error: "boom" }), t)).toBe(t.common.error);
   });

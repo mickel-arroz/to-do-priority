@@ -38,6 +38,9 @@ export const taskSchema = z.object({
     .optional(),
 });
 
+/** Tareas vinculadas a un hábito; el tope limita la selección del formulario. */
+const habitTaskIds = z.array(z.string().uuid()).max(LIMITS.tasksPerHabit);
+
 export const habitBaseSchema = z.object({
   name: z.string().trim().min(1).max(LIMITS.habitName),
   description: z.string().max(LIMITS.habitDescription).nullish(),
@@ -45,7 +48,7 @@ export const habitBaseSchema = z.object({
   target_days: z.number().int().positive().nullish(),
   end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullish(),
   punishment_enabled: z.boolean().optional(),
-  task_ids: z.array(z.string().uuid()).min(1).max(50),
+  task_ids: habitTaskIds.min(1),
 });
 
 // A fixed target date must not be before the start date (front also blocks
@@ -58,7 +61,10 @@ export const habitSchema = habitBaseSchema.refine(futureEndDate, {
   path: ["end_date"],
 });
 
+// Al editar, `task_ids` son sólo las tareas pendientes: las cerradas las
+// conserva el servidor, así que la lista puede llegar vacía si queda historial.
 export const habitUpdateSchema = habitBaseSchema
+  .extend({ task_ids: habitTaskIds })
   .partial()
   .refine(futureEndDate, { error: "end_date_not_future", path: ["end_date"] });
 
@@ -90,6 +96,14 @@ export const busyBlocksSchema = z.object({
  */
 export function validationErrorResponse(error: z.ZodError) {
   const tooBig = error.issues.find((i) => i.code === "too_big");
+  // Una lista con demasiados elementos no es un texto largo: tiene su código
+  if (tooBig?.origin === "array") {
+    const field = String(tooBig.path[tooBig.path.length - 1] ?? "");
+    return NextResponse.json(
+      { error: "too_many", field, max: Number(tooBig.maximum) },
+      { status: 400 }
+    );
+  }
   if (tooBig) {
     const path = tooBig.path;
     const field =

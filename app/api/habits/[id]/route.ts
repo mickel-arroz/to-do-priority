@@ -3,6 +3,7 @@ import { isUnauthorized, jsonError, requireUser } from "@/app/api/_lib/auth";
 import { notifyChange } from "@/app/api/_lib/live-sync";
 import { dueDatesOf, syncHabitDays } from "@/app/api/_lib/habit-day";
 import { habitUpdateSchema, validationErrorResponse } from "@/app/api/_lib/schemas";
+import type { TaskStatus } from "@/lib/types";
 
 export async function GET(
   _request: Request,
@@ -48,6 +49,33 @@ export async function PATCH(
 
   const { task_ids, ...habitInput } = parsed.data;
 
+  // `task_ids` son las tareas pendientes que el hábito quiere vinculadas. Las
+  // ya cerradas siguen vinculadas pase lo que pase: son el historial del que
+  // el calendario deriva los días (ADR 0005, 0009), y cada instancia cerrada
+  // de una recurrente suma una, así que el cliente no las manda. Los días a
+  // recalcular son los de las que salen y los de las que entran, y hay que
+  // saber cuáles son antes de romper el conjunto viejo.
+  let removed: string[] = [];
+  let added: string[] = [];
+  if (task_ids) {
+    const { data: previous } = await ctx.supabase
+      .from("habit_tasks")
+      .select("task_id, tasks!inner(status)")
+      .eq("habit_id", id);
+    const links = (previous ?? []) as unknown as {
+      task_id: string;
+      tasks: { status: TaskStatus } | null;
+    }[];
+    const before = new Set(links.map((l) => l.task_id));
+    const after = new Set([
+      ...task_ids,
+      ...links.filter((l) => l.tasks?.status !== "pending").map((l) => l.task_id),
+    ]);
+    if (after.size === 0) return jsonError("invalid_payload", 400);
+    removed = [...before].filter((t) => !after.has(t));
+    added = [...after].filter((t) => !before.has(t));
+  }
+
   const { data: habit, error } = await ctx.supabase
     .from("habits")
     .update(habitInput)
@@ -57,34 +85,27 @@ export async function PATCH(
 
   if (error) return jsonError(error.message, 500);
 
-  if (task_ids) {
-    // Los vínculos se reemplazan enteros. Los días que hay que recalcular son
-    // los de las tareas que salen y los de las que entran, y hay que saber
-    // cuáles son antes de romper el conjunto viejo.
-    const { data: previous } = await ctx.supabase
+  if (removed.length > 0) {
+    await ctx.supabase
       .from("habit_tasks")
-      .select("task_id")
-      .eq("habit_id", id);
-    const before = new Set((previous ?? []).map((l) => l.task_id as string));
-    const after = new Set(task_ids);
-    const changed = [
-      ...[...before].filter((t) => !after.has(t)),
-      ...[...after].filter((t) => !before.has(t)),
-    ];
-
-    await ctx.supabase.from("habit_tasks").delete().eq("habit_id", id);
+      .delete()
+      .eq("habit_id", id)
+      .in("task_id", removed);
+  }
+  if (added.length > 0) {
     const { error: linkError } = await ctx.supabase.from("habit_tasks").insert(
-      task_ids.map((task_id) => ({
+      added.map((task_id) => ({
         habit_id: id,
         task_id,
         user_id: ctx.user.id,
       }))
     );
     if (linkError) return jsonError(linkError.message, 500);
+  }
 
-    if (changed.length > 0) {
-      await syncHabitDays(ctx, [id], await dueDatesOf(ctx, changed));
-    }
+  const changed = [...removed, ...added];
+  if (changed.length > 0) {
+    await syncHabitDays(ctx, [id], await dueDatesOf(ctx, changed));
   }
 
   await notifyChange(ctx, request);

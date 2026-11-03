@@ -4,8 +4,9 @@ import type { Dictionary } from "@/lib/i18n";
 /**
  * Human-readable message for a caught API error. Codes the backend raises on
  * purpose get their own message, so the user sees a specific reason instead of
- * the generic fallback: `too_long` names the field and its maximum, and
- * `subtask_limit_reached` says the task is full.
+ * the generic fallback: `too_long` names the field and its maximum, `too_many`
+ * names the list and how many items fit, and `subtask_limit_reached` says the
+ * task is full.
  */
 export function apiErrorMessage(err: unknown, t: Dictionary): string {
   if (err instanceof ApiError && err.body?.error === "subtask_limit_reached") {
@@ -22,6 +23,16 @@ export function apiErrorMessage(err: unknown, t: Dictionary): string {
     };
     const label = labels[field] ?? field;
     return `${label}: ${t.tasks.charLimitError} (${max}).`;
+  }
+  if (err instanceof ApiError && err.body?.error === "too_many") {
+    const field = String(err.body.field ?? "");
+    const max = Number(err.body.max ?? 0);
+    const labels: Record<string, string> = {
+      task_ids: t.habits.linkedTasks,
+      subtasks: t.tasks.subtasks,
+    };
+    const label = labels[field] ?? field;
+    return `${label}: ${t.common.itemLimitError} (${max}).`;
   }
   return t.common.error;
 }

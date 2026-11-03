@@ -76,6 +76,16 @@ export function HabitFormDialog({
   const [loading, setLoading] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
 
+  // El formulario sólo maneja las tareas pendientes. Las instancias cerradas
+  // siguen vinculadas como historial del hábito y el servidor las conserva:
+  // ni se listan ni se mandan, porque crecen una por día cerrado y desbordarían
+  // el tope de `task_ids`. Con historial, el hábito puede quedarse sin
+  // pendientes y seguir teniendo vínculos.
+  const pendingIds = new Set(tasks.map((task) => task.id));
+  const linkedIds = habit?.habit_tasks?.map((ht) => ht.task_id) ?? [];
+  const hasHistory = linkedIds.some((id) => !pendingIds.has(id));
+  const hasLinks = taskIds.size > 0 || hasHistory;
+
   // Derived-state-during-render: repopulate the form whenever it opens
   const [prevOpen, setPrevOpen] = useState(false);
   if (open !== prevOpen) {
@@ -95,7 +105,7 @@ export function HabitFormDialog({
       setTargetDays(habit?.target_days ?? 30);
       setEndDate(habit?.end_date ?? defaultEndDate);
       setPunishment(habit?.punishment_enabled ?? false);
-      setTaskIds(new Set(habit?.habit_tasks?.map((ht) => ht.task_id) ?? []));
+      setTaskIds(new Set(linkedIds.filter((id) => pendingIds.has(id))));
       setSearch("");
       setResults(tasks);
       setOffset(0);
@@ -155,7 +165,7 @@ export function HabitFormDialog({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim() || taskIds.size === 0 || hasOverflow) return;
+    if (!name.trim() || !hasLinks || hasOverflow) return;
     if (goalMode === "date" && (!endDate || endDate <= today)) return;
 
     const input: HabitInput = {
@@ -353,7 +363,7 @@ export function HabitFormDialog({
               <LoadingButton
                 type="submit"
                 loading={saving}
-                disabled={!name.trim() || taskIds.size === 0 || hasOverflow}
+                disabled={!name.trim() || !hasLinks || hasOverflow}
                 data-testid="habit-save"
               >
                 {t.common.save}
