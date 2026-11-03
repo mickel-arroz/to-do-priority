@@ -353,6 +353,7 @@ export function TaskFormDialog({
       } else {
         await api.tasks.create(input);
       }
+      toast.success(task ? t.tasks.taskUpdated : t.tasks.taskCreated);
       onOpenChange(false);
       router.refresh();
     } catch (err) {
@@ -367,6 +368,7 @@ export function TaskFormDialog({
     setDeleting(true);
     try {
       await api.tasks.remove(task.id);
+      toast.success(t.tasks.taskDeleted);
       onOpenChange(false);
       router.refresh();
     } catch (err) {
