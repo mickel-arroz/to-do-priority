@@ -89,31 +89,35 @@ export const busyBlocksSchema = z.object({
   sleep_hours: z.number().int().min(MIN_SLEEP_HOURS).max(MAX_SLEEP_HOURS).optional(),
 });
 
+/** El código de cliente de cada clase de `too_big`, según lo que se pasó. */
+const TOO_BIG_CODES: Record<string, string> = {
+  string: "too_long",
+  array: "too_many",
+  number: "too_large",
+  int: "too_large",
+};
+
 /**
- * Turn a Zod failure into a specific client error. String length overflows
- * return `too_long` with the offending field + max so the UI can show an exact
- * message instead of a generic one; anything else stays `invalid_payload`.
+ * Turn a Zod failure into a specific client error. Overflows return the
+ * offending field + max so the UI can show an exact message instead of a
+ * generic one, with a code per kind: `too_long` for a text's length,
+ * `too_many` for a list's items, `too_large` for a number's value. Anything
+ * else stays `invalid_payload`.
  */
 export function validationErrorResponse(error: z.ZodError) {
   const tooBig = error.issues.find((i) => i.code === "too_big");
-  // Una lista con demasiados elementos no es un texto largo: tiene su código
-  if (tooBig?.origin === "array") {
-    const field = String(tooBig.path[tooBig.path.length - 1] ?? "");
-    return NextResponse.json(
-      { error: "too_many", field, max: Number(tooBig.maximum) },
-      { status: 400 }
-    );
-  }
-  if (tooBig) {
+  const code = tooBig && TOO_BIG_CODES[tooBig.origin];
+  if (tooBig && code) {
     const path = tooBig.path;
+    // El título de una subtarea se informa como `subtask`, no por su índice
     const field =
-      path[0] === "subtasks"
+      code === "too_long" && path[0] === "subtasks"
         ? "subtask"
         : String(path[path.length - 1] ?? "");
-    const max = Number(
-      (tooBig as { maximum?: number | bigint }).maximum ?? 0
+    return NextResponse.json(
+      { error: code, field, max: Number(tooBig.maximum) },
+      { status: 400 }
     );
-    return NextResponse.json({ error: "too_long", field, max }, { status: 400 });
   }
   // Custom refine failures carry a machine code as their message
   const custom = error.issues.find((i) => i.code === "custom");

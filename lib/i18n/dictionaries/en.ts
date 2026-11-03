@@ -15,6 +15,7 @@ export const en = {
     optional: "optional",
     undo: "Undo",
     itemLimitError: "exceeds the maximum number of items allowed",
+    valueLimitError: "exceeds the maximum value allowed",
   },
   nav: {
     home: "Home",

@@ -44,6 +44,16 @@ describe("apiErrorMessage", () => {
     expect(message).not.toContain(t.tasks.charLimitError);
   });
 
+  it("nombra el número y su valor máximo, sin hablar de caracteres", () => {
+    const err = apiError({ error: "too_large", field: "pomodoro_minutes", max: 180 });
+    const message = apiErrorMessage(err, t);
+
+    expect(message).toContain(t.tasks.pomodoro);
+    expect(message).toContain("180");
+    expect(message).toContain(t.common.valueLimitError);
+    expect(message).not.toContain(t.tasks.charLimitError);
+  });
+
   it("cae al mensaje genérico con un código que no conoce", () => {
     expect(apiErrorMessage(apiError({ error: "boom" }), t)).toBe(t.common.error);
   });

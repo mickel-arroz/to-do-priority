@@ -17,6 +17,7 @@ export const es: Dictionary = {
     optional: "opcional",
     undo: "Deshacer",
     itemLimitError: "supera el máximo de elementos permitido",
+    valueLimitError: "supera el valor máximo permitido",
   },
   nav: {
     home: "Inicio",
