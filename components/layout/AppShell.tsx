@@ -14,6 +14,7 @@ import { LiveSyncProvider } from "@/components/sync/LiveSync";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useT } from "@/lib/i18n/locale-context";
 import { createBrowserLiveSync } from "@/lib/live-sync-browser";
+import { useDayChangeRefresh } from "@/hooks/useDayChangeRefresh";
 import { notifyModalNavigation } from "@/hooks/useModalHistory";
 
 type AppShellProps = {
@@ -31,6 +32,8 @@ export function AppShell({
   children,
 }: AppShellProps) {
   const t = useT();
+  // Shared by every authenticated page, so all of them follow the user's day
+  useDayChangeRefresh();
   // One per user; it only connects once something subscribes, in the browser
   const liveSync = useMemo(() => createBrowserLiveSync(userId), [userId]);
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);

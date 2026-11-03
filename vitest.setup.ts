@@ -21,11 +21,13 @@ if (typeof window !== "undefined") {
     disconnect = vi.fn();
   };
 
-  window.IntersectionObserver ??= vi.fn().mockImplementation(() => ({
-    observe: vi.fn(),
-    unobserve: vi.fn(),
-    disconnect: vi.fn(),
-  })) as unknown as typeof IntersectionObserver;
+  // También clase: el <Link> de Next lo instancia con `new` para el prefetch.
+  window.IntersectionObserver ??= class {
+    observe = vi.fn();
+    unobserve = vi.fn();
+    disconnect = vi.fn();
+    takeRecords = vi.fn(() => []);
+  } as unknown as typeof IntersectionObserver;
 
   Element.prototype.scrollIntoView ??= vi.fn();
   Element.prototype.hasPointerCapture ??= vi.fn();

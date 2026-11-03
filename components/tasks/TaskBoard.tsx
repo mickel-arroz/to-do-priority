@@ -140,12 +140,18 @@ export function TaskBoard({
   // Adopt fresh server data whenever it arrives (a router.refresh after saving
   // the task form), but merge today's completions so a just-completed task
   // never flickers out while the refetch lags.
+  // When the user's day changed there is nothing optimistic to keep: what was
+  // completed before belongs to yesterday.
   const [prevInitial, setPrevInitial] = useState(initialTasks);
-  if (initialTasks !== prevInitial) {
+  const [prevToday, setPrevToday] = useState(today);
+  const dayChanged = today !== prevToday;
+  if (initialTasks !== prevInitial || dayChanged) {
     setPrevInitial(initialTasks);
+    setPrevToday(today);
     setTasks(initialTasks);
     setCompletedToday((prev) => {
       const server = initialCompletedToday ?? [];
+      if (dayChanged) return server;
       const serverIds = new Set(server.map((t2) => t2.id));
       const pendingIds = new Set(initialTasks.map((t2) => t2.id));
       const stillOptimistic = prev.filter(

@@ -1,4 +1,5 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
+import { useState } from "react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CategoryContent } from "@/components/categories/CategoryContent";
@@ -284,5 +285,45 @@ describe("Completadas en una categoría", () => {
 
     expect(await screen.findByText("Hecha ayer")).toBeInTheDocument();
     expect(api.tasks.completed).toHaveBeenCalledWith("c1");
+  });
+});
+
+describe("TaskBoard al cambiar el Día del usuario", () => {
+  it("el refresco del día nuevo deja fuera las completadas de ayer", () => {
+    const done = makeTask({
+      status: "yes",
+      due_date: TODAY,
+      completed_at: "2026-10-12T23:30:00Z",
+    });
+    // Lo que manda el servidor en cada render; el refresco lo reemplaza
+    let refresh!: (next: { today: string; completedToday: Task[] }) => void;
+    function Page() {
+      const [props, setProps] = useState({ today: TODAY, completedToday: [done] });
+      refresh = setProps;
+      return (
+        <PomodoroProvider>
+          <HomeContent
+            userName="Mickel"
+            hour={0}
+            today={props.today}
+            dayOfYear={285}
+            tasks={[]}
+            completedToday={props.completedToday}
+            categories={[category]}
+            advice={null}
+          />
+        </PomodoroProvider>
+      );
+    }
+    const success = () =>
+      within(screen.getByTestId("today-progress")).queryByTestId(
+        "today-progress-success"
+      );
+
+    renderWithProviders(<Page />);
+    expect(success()).not.toBeNull();
+
+    act(() => refresh({ today: "2026-10-13", completedToday: [] }));
+    expect(success()).toBeNull();
   });
 });
