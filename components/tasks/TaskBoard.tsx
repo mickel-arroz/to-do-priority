@@ -524,7 +524,7 @@ export function TaskRows({ tasks }: { tasks: Task[] }) {
   );
 }
 
-function TaskRowConnected({ task }: { task: Task }) {
+export function TaskRowConnected({ task }: { task: Task }) {
   const board = useTaskBoard();
   return (
     <TaskRow

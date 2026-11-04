@@ -6,6 +6,7 @@ import { DailyAdvice } from "@/components/advice/DailyAdvice";
 import { CategoryIcon } from "@/components/categories/CategoryIcon";
 import { CompletedSection } from "@/components/home/CompletedSection";
 import { PendingSection } from "@/components/home/PendingSection";
+import { TaskSearch } from "@/components/home/TaskSearch";
 import { TaskSection } from "@/components/home/TaskSection";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useRefreshOnNewAdvice } from "@/components/sync/LiveSync";
@@ -78,10 +79,13 @@ function HomeSections({
       <PageHeader
         title={`${greeting}${userName ? `, ${userName.split(" ")[0]}` : ""}`}
         actions={
-          <Button onClick={() => board.openNewTask()} data-testid="new-task">
-            <Plus className="size-4" />
-            {t.tasks.newTask}
-          </Button>
+          <div className="flex items-center gap-2">
+            <TaskSearch />
+            <Button onClick={() => board.openNewTask()} data-testid="new-task">
+              <Plus className="size-4" />
+              {t.tasks.newTask}
+            </Button>
+          </div>
         }
       />
 

@@ -83,6 +83,10 @@ export const en = {
   },
   tasks: {
     newTask: "New task",
+    searchTasks: "Search tasks",
+    searchPlaceholder: "Title, description or subtask",
+    searchHint: (n: number) =>
+      `Type at least ${n} characters to search your pending tasks`,
     editTask: "Edit task",
     title: "Title",
     description: "Description or notes",

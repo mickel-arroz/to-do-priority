@@ -48,6 +48,7 @@ export {
   Play,
   Plus,
   RotateCcw,
+  Search,
   ShieldAlert,
   ShoppingCart,
   Sprout,

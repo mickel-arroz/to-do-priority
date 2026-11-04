@@ -87,6 +87,10 @@ export const es: Dictionary = {
   },
   tasks: {
     newTask: "Nueva tarea",
+    searchTasks: "Buscar tareas",
+    searchPlaceholder: "Título, descripción o subtarea",
+    searchHint: (n: number) =>
+      `Escribe al menos ${n} caracteres para buscar entre tus tareas pendientes`,
     editTask: "Editar tarea",
     title: "Título",
     description: "Descripción o notas",
