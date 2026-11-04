@@ -8,6 +8,7 @@ import { CompletedSection } from "@/components/home/CompletedSection";
 import { PendingSection } from "@/components/home/PendingSection";
 import { TaskSection } from "@/components/home/TaskSection";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { useRefreshOnNewAdvice } from "@/components/sync/LiveSync";
 import { TaskBoard, TaskRows, useTaskBoard } from "@/components/tasks/TaskBoard";
 import type { Bilingual } from "@/lib/advice";
 import { useT } from "@/lib/i18n/locale-context";
@@ -32,6 +33,10 @@ type HomeContentProps = {
 };
 
 export function HomeContent(props: HomeContentProps) {
+  // The home advice comes from the server components; the board refetches
+  // itself on change notices, so only new advice refreshes the route.
+  useRefreshOnNewAdvice();
+
   return (
     <TaskBoard
       scope={{ kind: "home" }}

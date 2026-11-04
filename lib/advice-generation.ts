@@ -11,6 +11,8 @@ import {
 import { adviceSchema, buildAdvicePrompt } from "@/lib/ai/advice-prompt";
 import { createAdviceProvider } from "@/lib/ai/provider";
 import { resolveSleepHours, toBlockInputs } from "@/lib/availability";
+import { NEW_ADVICE_EVENT } from "@/lib/live-sync";
+import { publishNotice } from "@/lib/live-sync-server";
 import type { BusyBlock, Habit, HabitLog, Task } from "@/lib/types";
 
 type HabitAdviceRow = { habit_id: string; advice_es: string; advice_date: string };
@@ -28,6 +30,7 @@ type HabitAdviceRow = { habit_id: string; advice_es: string; advice_date: string
  */
 export async function runDailyAdviceGeneration(
   supabase: SupabaseClient,
+  userId: string,
   today: string
 ): Promise<void> {
   try {
@@ -165,6 +168,10 @@ export async function runDailyAdviceGeneration(
     console.log(
       `[advice] generado con ${model}: inicio + ${Object.keys(parsed.habits).length} hábito(s)`
     );
+
+    // Las vistas que muestran consejos se refrescan solas, incluida la pestaña
+    // que disparó la generación. Un fallo al publicar se traga dentro.
+    await publishNotice(supabase, userId, NEW_ADVICE_EVENT, {});
   } catch (error) {
     // El intento queda gastado, pero al día le quedan otros: la siguiente
     // navegación vuelve a probar hasta agotar ADVICE_ATTEMPTS_PER_DAY.

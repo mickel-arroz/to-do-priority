@@ -33,7 +33,7 @@ export default async function AppLayout({
   ]);
   // Único punto por el que pasa toda página autenticada. `after()` corre
   // después de enviar la respuesta, así que no entra en el camino del render.
-  after(() => runDailyAdviceGeneration(deferred, today));
+  after(() => runDailyAdviceGeneration(deferred, user.id, today));
 
   const [{ data: profile }, { data: categories }] = await Promise.all([
     supabase

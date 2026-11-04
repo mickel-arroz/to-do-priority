@@ -3,7 +3,7 @@ import { ThemeProvider } from "next-themes";
 import { vi } from "vitest";
 import type { Locale } from "@/lib/i18n";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { createLiveSync, type ChangeNotice } from "@/lib/live-sync";
+import { createLiveSync, type LiveNotice } from "@/lib/live-sync";
 import { LocaleProvider } from "@/lib/i18n/locale-context";
 import type { Task } from "@/lib/types";
 
@@ -73,7 +73,7 @@ export const DEBOUNCE_MS = 30;
 
 /** El módulo de sincronización real sobre un canal que el test controla. */
 export function fakeLiveSync() {
-  const listeners = new Set<(notice: ChangeNotice) => void>();
+  const listeners = new Set<(notice: LiveNotice) => void>();
   const sync = createLiveSync({
     clientId: ME,
     debounceMs: DEBOUNCE_MS,
@@ -84,7 +84,11 @@ export function fakeLiveSync() {
   });
   return {
     sync,
-    emit: (origin: string) => listeners.forEach((l) => l({ origin })),
+    /** Un aviso de cambio originado en la pestaña `origin`. */
+    emit: (origin: string) =>
+      listeners.forEach((l) => l({ kind: "change", origin })),
+    /** Un aviso de consejo nuevo, que no viene de ninguna pestaña. */
+    emitNewAdvice: () => listeners.forEach((l) => l({ kind: "new-advice" })),
   };
 }
 

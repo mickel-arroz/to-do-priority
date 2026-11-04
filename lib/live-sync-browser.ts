@@ -4,6 +4,7 @@ import {
   CHANGE_EVENT,
   createLiveSync,
   getTabClientId,
+  NEW_ADVICE_EVENT,
   userChannel,
   type LiveSync,
 } from "@/lib/live-sync";
@@ -48,7 +49,13 @@ export function createBrowserLiveSync(userId: string): LiveSync {
           .channel(topic, { config: { private: true } })
           .on("broadcast", { event: CHANGE_EVENT }, ({ payload }) => {
             const origin = (payload as { origin?: unknown } | undefined)?.origin;
-            onNotice({ origin: typeof origin === "string" ? origin : null });
+            onNotice({
+              kind: "change",
+              origin: typeof origin === "string" ? origin : null,
+            });
+          })
+          .on("broadcast", { event: NEW_ADVICE_EVENT }, () => {
+            onNotice({ kind: "new-advice" });
           })
           .subscribe();
       })().catch(() => {});

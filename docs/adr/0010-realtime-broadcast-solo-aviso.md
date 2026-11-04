@@ -32,3 +32,7 @@ publicar en su canal; el navegador nunca lo usa para eso.
 
 En móvil el socket muere en segundo plano, así que además se vuelve a pedir el
 listado cuando la página recupera visibilidad.
+
+Además de las rutas, publica la generación diaria: al guardar consejos manda por
+el mismo canal un aviso de consejo nuevo, también sin datos y sin `origin`, con
+el mismo JWT del usuario (ver ADR 0002).

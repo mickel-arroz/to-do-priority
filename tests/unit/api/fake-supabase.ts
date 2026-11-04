@@ -73,6 +73,10 @@ class Builder implements PromiseLike<{ data: unknown; error: null }> {
     this.op.filters.push({ kind: "lt", column, value });
     return this;
   }
+  /** Las disyunciones se ignoran: el `resolve` decide qué filas devuelve. */
+  or() {
+    return this;
+  }
   order() {
     return this;
   }
@@ -106,16 +110,26 @@ export type FakeBroadcast = {
   payload: unknown;
 };
 
+/** Respuesta de una función RPC por nombre; sin ella, `{ data: null, error: null }`. */
+export type RpcResolver = (
+  name: string,
+  args: unknown
+) => { data: unknown; error: { message: string } | null } | undefined;
+
 export function fakeSupabase(
   resolve: Resolver = () => null,
-  { failBroadcast = false }: { failBroadcast?: boolean } = {}
+  {
+    failBroadcast = false,
+    rpc = () => undefined,
+  }: { failBroadcast?: boolean; rpc?: RpcResolver } = {}
 ) {
   const ops: FakeOp[] = [];
   const broadcasts: FakeBroadcast[] = [];
   const supabase = {
     from: (table: string) => new Builder(table, ops, resolve),
     storage: { from: () => ({ remove: async () => ({ data: null, error: null }) }) },
-    rpc: async () => ({ data: null, error: null }),
+    rpc: async (name: string, args: unknown) =>
+      rpc(name, args) ?? { data: null, error: null },
     realtime: { setAuth: async () => {} },
     channel: (name: string, opts?: { config?: { private?: boolean } }) => ({
       httpSend: async (event: string, payload: unknown) => {
